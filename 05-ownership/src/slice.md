@@ -44,3 +44,7 @@ fn main() {
      println!("positive pile contains 3: {}", found_positive);
 }
 ```
+
+Slices are one of the few objects that allow implicit coercion.
+If a function takes a slice as a parameter, you can pass a slice, an array,
+or a vector as the actual argument.
