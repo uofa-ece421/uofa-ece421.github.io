@@ -12,9 +12,9 @@ rules to ensure safe and fast access to data.
 
 <h1 style="font-size: 3rem; color: #aa0000">
 <ul>
-<li>Every value has an <em>owner</em></li>
-<li>Each datum has one owner at a time</li>
-<li>When the owner's lifetime ends, the data is released</li>
+<li>Every value has a variable called its <em>owner</em></li>
+<li>There is only one owner at a time</li>
+<li>When the owner's lifetime ends, the value is released</li>
 </ul>
 </h1>
 

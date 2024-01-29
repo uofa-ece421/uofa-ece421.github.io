@@ -184,9 +184,9 @@ rules to ensure safe and fast access to data.</p>
 </h1>
 <h1 style="font-size: 3rem; color: #aa0000">
 <ul>
-<li>Every value has an <em>owner</em></li>
-<li>Each datum has one owner at a time</li>
-<li>When the owner's lifetime ends, the data is released</li>
+<li>Every value has a variable called its <em>owner</em></li>
+<li>There is only one owner at a time</li>
+<li>When the owner's lifetime ends, the value is released</li>
 </ul>
 </h1>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="stack-vs-heap"><a class="header" href="#stack-vs-heap">Stack vs Heap</a></h1>
@@ -435,7 +435,9 @@ fn dangle() -&gt; &amp;String {
 
     println!(&quot;{}, {}!&quot;, hello, world);
 }</code></pre></pre>
+<p>The object <code>s</code> is type <code>String</code>; the slice <code>world</code> is type <code>&amp;str</code></p>
 <img src="img/trpl04-06.svg" alt="Slice representation" class="center" style="width: 50%;" />
+<p>Because a slice is a borrowed reference, the data race and reference rules apply</p>
 
                     </main>
 

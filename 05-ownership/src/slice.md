@@ -13,6 +13,11 @@ fn main() {
 }
 ```
 
+The object `s` is type `String`; the slice `world` is type `&str`
+
 <img src="img/trpl04-06.svg" alt="Slice representation" class="center" style="width: 50%;" />
+
+Because a slice is a borrowed reference, the data race and reference rules apply
+
 
 

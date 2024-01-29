@@ -183,7 +183,9 @@
 
     println!(&quot;{}, {}!&quot;, hello, world);
 }</code></pre></pre>
+<p>The object <code>s</code> is type <code>String</code>; the slice <code>world</code> is type <code>&amp;str</code></p>
 <img src="img/trpl04-06.svg" alt="Slice representation" class="center" style="width: 50%;" />
+<p>Because a slice is a borrowed reference, the data race and reference rules apply</p>
 
                     </main>
 
