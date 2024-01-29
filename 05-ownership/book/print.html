@@ -437,7 +437,29 @@ fn dangle() -&gt; &amp;String {
 }</code></pre></pre>
 <p>The object <code>s</code> is type <code>String</code>; the slice <code>world</code> is type <code>&amp;str</code></p>
 <img src="img/trpl04-06.svg" alt="Slice representation" class="center" style="width: 50%;" />
+<p>Note that all string constants are of type <code>&amp;'static str</code></p>
 <p>Because a slice is a borrowed reference, the data race and reference rules apply</p>
+<pre><pre class="playground"><code class="language-rust">fn binary_search(needle: i32, haystack: &amp;[i32]) -&gt; bool {
+    match haystack.len() {
+        0 =&gt; false,
+        1 =&gt; needle == haystack[0],
+        len =&gt; if needle &gt;= haystack[len/2] {
+            binary_search(needle, &amp;haystack[len/2..])
+        } else {
+            binary_search( needle, &amp;haystack[..len/2])
+        },
+    }
+}
+
+fn main() {
+     let pile = [-14, -9, -8, -3, 0, 2, 3, 6, 7, 11, 14];
+
+     let found_minus3 = binary_search(-3, &amp;pile);
+     println!(&quot;pile contains -3: {}&quot;, found_minus3);
+
+     let found_positive = binary_search(3, &amp;pile[4..]);
+     println!(&quot;positive pile contains 3: {}&quot;, found_positive);
+}</code></pre></pre>
 
                     </main>
 
