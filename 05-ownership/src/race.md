@@ -28,9 +28,9 @@ but not
 fn main() {
     let mut s = String::from("hello");
 
-    let r1 = &mut s;
+    let m1 = &mut s;
 
-    println!("{}, {}", s, r2);
+    println!("{}, {}", s, m1);
 }
 ```
 
