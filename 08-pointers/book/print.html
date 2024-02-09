@@ -1,0 +1,1564 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Smart Pointers</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="box.html"><strong aria-hidden="true">1.</strong> Box</a></li><li class="chapter-item expanded "><a href="list.html"><strong aria-hidden="true">2.</strong> Self-referential Structures</a></li><li class="chapter-item expanded "><a href="rc.html"><strong aria-hidden="true">3.</strong> Rc</a></li><li class="chapter-item expanded "><a href="dlc-list.html"><strong aria-hidden="true">4.</strong> Doubly-linked Circular List</a></li><li class="chapter-item expanded "><a href="refcell.html"><strong aria-hidden="true">5.</strong> Interior Mutability</a></li><li class="chapter-item expanded "><a href="dlc-refcell.html"><strong aria-hidden="true">6.</strong> Circular List (take two)</a></li><li class="chapter-item expanded "><a href="end.html"><strong aria-hidden="true">7.</strong> Summary</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Smart Pointers</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="box"><a class="header" href="#box">Box</a></h1>
+<p><code>Box</code>, <code>Rc</code>, and <code>Arc</code> are Rust's <em>smart pointers</em></p>
+<pre><pre class="playground"><code class="language-rust">fn main() {
+    let x: i32 = 101;
+    let boxed = Box::new(x);
+    let borrowed = &amp;x;
+
+    println!(&quot;Display is handled {} = {}&quot;, borrowed, boxed);
+
+    assert_eq!(x, *boxed);
+    assert_eq!(x, *borrowed);
+    // boxed is dropped here
+}</code></pre></pre>
+<p><code>Box</code> is considered <em>smart</em> because it implements the <code>Deref</code> and <code>Drop</code> traits.
+This allows boxed pointers to be behave like references.</p>
+<p><em>Deref Coercion</em> uses the <code>Deref</code> trait to convert references from one type
+to another, e.g. <code>&amp;String</code> to <code>&amp;str</code>, or <code>Vec&lt;T&gt;</code> and <code>&amp;[T]</code>.</p>
+<p>Deref coercion lets us write code that makes a lot of <code>&amp;</code> and <code>*</code> operators
+implicit, and makes the code more portable between references and smart pointers.</p>
+<pre><pre class="playground"><code class="language-rust">fn main() {
+    let x = 101;
+    let borrowed = &amp;x;
+    let boxed = Box::new(x);
+
+    println!(&quot;borrowed is a pointer {:?} = {:p}&quot;, borrowed as *const i32, &amp;x);
+    println!(&quot;Box points to a copy: {:?}&quot;, Box::into_raw(boxed));
+    // This is also a leak because boxed has now been consumed
+}</code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="self-referential-structures"><a class="header" href="#self-referential-structures">Self-referential Structures</a></h1>
+<p><code>Box</code> is used to make <em>recursive</em> structures a fixed/known size.</p>
+<pre><pre class="playground"><code class="language-rust">use std::fmt;
+
+struct SLNode&lt;T&gt; {
+    next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;, // Option needed because the last element's next is None
+    val: T,
+}
+
+impl&lt;T&gt; SLNode&lt;T&gt; {
+    fn new(val: T, next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;) -&gt; SLNode&lt;T&gt; {
+        SLNode {
+            next,
+            val,
+        }
+    }
+}   
+
+struct SList&lt;T&gt; {
+    root: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;,
+}
+
+impl&lt;T&gt; SList&lt;T&gt; {
+    fn new() -&gt; SList&lt;T&gt; {
+        SList { root: None }
+    }
+}
+
+impl&lt;T: std::fmt::Display&gt; fmt::Display for SList&lt;T&gt; {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+        write!(f, &quot;[&quot;)?;
+        let mut p = &amp;self.root;
+        while let Some(curr) = p {
+            write!(f, &quot;{} &quot;, curr.val)?;
+            p = &amp;curr.next;
+        }
+        write!(f, &quot;]&quot;)
+    }
+}  
+    
+fn main() {
+    let mut stack = SList::&lt;i32&gt;::new();
+
+    println!(&quot;our first list based stack: {}&quot;, stack);
+}</code></pre></pre>
+<p>Let's add the <code>push</code> method</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">struct SLNode&lt;T&gt; {
+</span><span class="boring">    next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;, // Option needed because the last element's next is None
+</span><span class="boring">    val: T,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T&gt; SLNode&lt;T&gt; {
+</span><span class="boring">    fn new(val: T, next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;) -&gt; SLNode&lt;T&gt; {
+</span><span class="boring">        SLNode {
+</span><span class="boring">            next,
+</span><span class="boring">            val,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">}   
+</span><span class="boring">
+</span><span class="boring">struct SList&lt;T&gt; {
+</span><span class="boring">    root: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span>impl&lt;T&gt; SList&lt;T&gt; {
+    fn new() -&gt; SList&lt;T&gt; {
+        SList { root: None }
+    }
+
+    fn push(&amp;mut self, val: T) {
+        self.root = Some(Box::new(SLNode::new(val, self.root)));
+    }
+}
+<span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; fmt::Display for SList&lt;T&gt; {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        write!(f, &quot;[&quot;)?;
+</span><span class="boring">        let mut p = &amp;self.root;
+</span><span class="boring">        while let Some(curr) = p {
+</span><span class="boring">            write!(f, &quot;{} &quot;, curr.val)?;
+</span><span class="boring">            p = &amp;curr.next;
+</span><span class="boring">        }
+</span><span class="boring">        write!(f, &quot;]&quot;)
+</span><span class="boring">    }
+</span><span class="boring">}  
+</span><span class="boring">    
+</span><span class="boring">fn main() {
+</span><span class="boring">    let stack = SList::&lt;i32&gt;::new();
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;our first list based stack: {}&quot;, stack);
+</span><span class="boring">}
+</span><span class="boring"></span></code></pre></pre>
+<p>The problem is that <code>new</code> consumes it's arguments, i.e. it takes ownership away
+from <code>self.root</code>.</p>
+<p>The secret is <a href="https://doc.rust-lang.org/std/mem/fn.replace.html">std::mem::replace</a></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">struct SLNode&lt;T&gt; {
+</span><span class="boring">    next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;, // Option needed because the last element's next is None
+</span><span class="boring">    val: T,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T&gt; SLNode&lt;T&gt; {
+</span><span class="boring">    fn new(val: T, next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;) -&gt; SLNode&lt;T&gt; {
+</span><span class="boring">        SLNode {
+</span><span class="boring">            next,
+</span><span class="boring">            val,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">}   
+</span><span class="boring">
+</span><span class="boring">struct SList&lt;T&gt; {
+</span><span class="boring">    root: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T&gt; SList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; SList&lt;T&gt; {
+</span><span class="boring">        SList { root: None }
+</span><span class="boring">    }
+</span><span class="boring">
+</span>    fn push(&amp;mut self, val: T) {
+        let new_next = mem::replace(&amp;mut self.root, None);
+        self.root = Some(Box::new(SLNode::new(val, new_next)));
+    }
+<span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; fmt::Display for SList&lt;T&gt; {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        write!(f, &quot;[&quot;)?;
+</span><span class="boring">        let mut p = &amp;self.root;
+</span><span class="boring">        while let Some(curr) = p {
+</span><span class="boring">            write!(f, &quot;{} &quot;, curr.val)?;
+</span><span class="boring">            p = &amp;curr.next;
+</span><span class="boring">        }
+</span><span class="boring">        write!(f, &quot;]&quot;)
+</span><span class="boring">    }
+</span><span class="boring">}  
+</span><span class="boring">    
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = SList::new();
+</span><span class="boring">
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;our first list based stack: {}&quot;, stack);
+</span><span class="boring">}
+</span><span class="boring"></span></code></pre></pre>
+<p>If <code>push</code> was hard, <code>pop</code> is not going to be any easier</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">struct SLNode&lt;T&gt; {
+</span><span class="boring">    next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;, // Option needed because the last element's next is None
+</span><span class="boring">    val: T,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T&gt; SLNode&lt;T&gt; {
+</span><span class="boring">    fn new(val: T, next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;) -&gt; SLNode&lt;T&gt; {
+</span><span class="boring">        SLNode {
+</span><span class="boring">            next,
+</span><span class="boring">            val,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">}   
+</span><span class="boring">
+</span><span class="boring">struct SList&lt;T&gt; {
+</span><span class="boring">    root: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T&gt; SList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; SList&lt;T&gt; {
+</span><span class="boring">        SList { root: None }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn push(&amp;mut self, val: T) {
+</span><span class="boring">        let new_next = mem::replace(&amp;mut self.root, None);
+</span><span class="boring">        self.root = Some(Box::new(SLNode::new(val, new_next)));
+</span><span class="boring">    }
+</span><span class="boring">
+</span>    fn pop(&amp;mut self) -&gt; Option&lt;T&gt; {
+        match self.root {
+            Some(mut node) =&gt; {
+                let retval = node.val;
+                self.root = node.next;
+                drop(node);
+                Some(retval)
+            },
+            None =&gt; None,
+        }
+    }
+<span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; fmt::Display for SList&lt;T&gt; {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        write!(f, &quot;[&quot;)?;
+</span><span class="boring">        let mut p = &amp;self.root;
+</span><span class="boring">        while let Some(curr) = p {
+</span><span class="boring">            write!(f, &quot;{} &quot;, curr.val)?;
+</span><span class="boring">            p = &amp;curr.next;
+</span><span class="boring">        }
+</span><span class="boring">        write!(f, &quot;]&quot;)
+</span><span class="boring">    }
+</span><span class="boring">}  
+</span><span class="boring">    
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = SList::&lt;i32&gt;::new();
+</span><span class="boring">
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;our first list based stack: {}&quot;, stack);
+</span><span class="boring">}
+</span><span class="boring"></span></code></pre></pre>
+<p>Now we need both <code>replace</code> and <a href="https://doc.rust-lang.org/std/mem/fn.swap.html">std::mem::swap</a>. We also need the <code>Copy</code> trait to return the value.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">struct SLNode&lt;T&gt; {
+</span><span class="boring">    next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;, // Option needed because the last element's next is None
+</span><span class="boring">    val: T,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T&gt; SLNode&lt;T&gt; {
+</span><span class="boring">    fn new(val: T, next: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;) -&gt; SLNode&lt;T&gt; {
+</span><span class="boring">        SLNode {
+</span><span class="boring">            next,
+</span><span class="boring">            val,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">}   
+</span><span class="boring">
+</span><span class="boring">struct SList&lt;T&gt; {
+</span><span class="boring">    root: Option&lt;Box&lt;SLNode&lt;T&gt;&gt;&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: Clone&gt; SList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; SList&lt;T&gt; {
+</span><span class="boring">        SList { root: None }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn push(&amp;mut self, val: T) {
+</span><span class="boring">        let new_next = mem::replace(&amp;mut self.root, None);
+</span><span class="boring">        self.root = Some(Box::new(SLNode::new(val, new_next)));
+</span><span class="boring">    }
+</span><span class="boring">
+</span>    fn pop(&amp;mut self) -&gt; Option&lt;T&gt; {
+        match mem::replace(&amp;mut self.root, None) {
+            Some(mut node) =&gt; {
+                let retval = node.val.clone();
+                mem::swap(&amp;mut self.root, &amp;mut node.next);
+                drop(node);
+                Some(retval)
+            },
+            None =&gt; None,
+        }
+    }
+<span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; fmt::Display for SList&lt;T&gt; {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        write!(f, &quot;[&quot;)?;
+</span><span class="boring">        let mut p = &amp;self.root;
+</span><span class="boring">        while let Some(curr) = p {
+</span><span class="boring">            write!(f, &quot;{} &quot;, curr.val)?;
+</span><span class="boring">            p = &amp;curr.next;
+</span><span class="boring">        }
+</span><span class="boring">        write!(f, &quot;]&quot;)
+</span><span class="boring">    }
+</span><span class="boring">}  
+</span><span class="boring">    
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = SList::new();
+</span><span class="boring">
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;our first list based stack: {}&quot;, stack);
+</span><span class="boring">    let front = stack.pop();
+</span><span class="boring">    println!(&quot;removed {} from list: {}&quot;, front.unwrap(), stack);
+</span><span class="boring">}
+</span><span class="boring"></span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rc"><a class="header" href="#rc">Rc</a></h1>
+<ul>
+<li><code>Rc</code> is the <em>reference counting</em> smart pointer.</li>
+<li>Like <code>Box</code>, it implements both the <code>Deref</code> and <code>Drop</code> traits, so you can use it (almost) interchangeably with references.</li>
+<li><code>Rc</code> allows multiple <em>immutable</em> owners</li>
+<li><code>Rc::clone()</code> is used to increment the owner count - it is a shallow copy</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">use std::rc::Rc;
+
+fn main() {
+    let a = Rc::new(String::from(&quot;Shared string&quot;));
+
+    println!(&quot;initial ref count {}&quot;, Rc::strong_count(&amp;a));
+
+    {
+        let b = Rc::clone(&amp;a);
+
+        println!(&quot;a's ref count {}&quot;, Rc::strong_count(&amp;a));
+        println!(&quot;b's ref count {}&quot;, Rc::strong_count(&amp;b));
+
+        // Like box, Rc has Deref and Drop traits implemented
+        assert_eq!(a.len(), b.len());
+        println!(&quot;Just checking: {}&quot;, b);
+    }
+
+    println!(&quot;ref count after b is dropped {}&quot;, Rc::strong_count(&amp;a));
+} // ref count goes to zero when a goes out of scope</code></pre></pre>
+<p><code>Rc</code> is for single-threaded programs only. For multi-threaded programs, use the
+atomic reference counter, <a href="https://doc.rust-lang.org/std/sync/struct.Arc.html">std::sync::Arc</a></p>
+<h3 id="weak"><a class="header" href="#weak">Weak</a></h3>
+<p><a href="https://doc.rust-lang.org/std/rc/struct.Weak.html">std::rc::Weak</a> is a version
+of <code>Rc</code> that holds a <em>non-owning</em> reference to a managed object.</p>
+<p><code>Weak</code> pointers can be used as temporary references to <code>Rc</code> objects, and in
+particular can be used to prevent circular references between <code>Rc</code> pointers.
+Mutual owning <code>Rc</code> references could prevent either object from being dropped.</p>
+<p>You can't directly dereference a weak pointer, because the object it referenced
+may have been dropped. You can <code>upgrade()</code> the weak referece to a <em>strong</em> <code>Rc</code>
+reference to use it.</p>
+<pre><pre class="playground"><code class="language-rust">use std::rc::Rc;
+
+fn main() {
+    let a = Rc::new(&quot;shared string&quot;.to_string());
+    let c = {
+        let b = Rc::clone(&amp;a);
+
+        let d = Rc::downgrade(&amp;b); 
+        println!(&quot;b's counts strong {}, weak {}&quot;, Rc::strong_count(&amp;b), Rc::weak_count(&amp;b));
+        d
+    };
+
+    println!(&quot;a's counts strong {}, weak {}&quot;, Rc::strong_count(&amp;a), Rc::weak_count(&amp;a));
+
+    if let Some(d) = c.upgrade() {
+       println!(&quot;can use the upgraded weak pointer: {}&quot;, d);
+    }
+
+    drop(a);
+
+    match c.upgrade() {
+        Some(d) =&gt; println!(&quot;still here! {}&quot;, d),
+        None =&gt; println!(&quot;all is lost!&quot;),
+    }
+}</code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="doubly-linked-circular-list"><a class="header" href="#doubly-linked-circular-list">Doubly-linked Circular List</a></h1>
+<p>Why is this my favorite list for systems programming?</p>
+<ul>
+<li>No sentinel (<code>NULL</code>, <code>None</code>) pointers to worry about
+<ul>
+<li>Empty list is not a special case</li>
+</ul>
+</li>
+<li><code>prepend</code> and <code>append</code> are exactly the same cost
+<ul>
+<li>No annoying tail pointer that has to be updated</li>
+</ul>
+</li>
+<li>Can delete from the middle!
+<ul>
+<li>Don't need to start at the root and <em>find</em> the node</li>
+</ul>
+</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::rc::{Rc, Weak};
+</span><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span>struct DLNode&lt;T&gt; {
+    next: Weak&lt;DLNode&lt;T&gt;&gt;,
+    prev: Weak&lt;DLNode&lt;T&gt;&gt;,
+    val: T,
+}
+
+impl&lt;T: std::default::Default&gt; DLNode&lt;T&gt; {
+    fn new(val: T, next: Weak&lt;DLNode&lt;T&gt;&gt;, prev: Weak&lt;DLNode&lt;T&gt;&gt;) -&gt; DLNode&lt;T&gt; {
+        DLNode { next, prev, val }
+    }
+
+    fn empty() -&gt; Rc&lt;Self&gt; {
+        Rc::new_cyclic(|me| {
+            DLNode {
+                next: me.clone(),
+                prev: me.clone(),
+                val: Default::default(),
+            }
+        })
+    }
+}
+
+struct DList&lt;T&gt; {
+    root: Rc&lt;DLNode&lt;T&gt;&gt;,
+}
+<span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; fmt::Display for DList&lt;T&gt; {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        write!(f, &quot;[&quot;)?;
+</span><span class="boring">        let p = &amp;self.root.next.upgrade().unwrap();
+</span><span class="boring">        loop {
+</span><span class="boring">            if std::ptr::eq(p, &amp;self.root) {
+</span><span class="boring">                break;
+</span><span class="boring">            }
+</span><span class="boring">            write!(f, &quot;{} &quot;, p.val)?;
+</span><span class="boring">            let p = &amp;p.next.upgrade().unwrap();
+</span><span class="boring">        }
+</span><span class="boring">        write!(f, &quot;]&quot;)
+</span><span class="boring">    }
+</span><span class="boring">}  
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::default::Default&gt; DList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; DList&lt;T&gt; {
+</span><span class="boring">        DList { root: DLNode::&lt;T&gt;::empty() }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn push(&amp;mut self, val: T) {
+</span><span class="boring">        let node = Rc::new(DLNode::new(val, self.root.next, Rc::downgrade(&amp;self.root)));
+</span><span class="boring">        let root_next = mem::replace(&amp;mut self.root.next, Rc::downgrade(&amp;node));
+</span><span class="boring">        let rc_next = root_next.upgrade().unwrap();
+</span><span class="boring">        rc_next.prev = Rc::downgrade(&amp;node);
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = DList::new();
+</span><span class="boring">
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;first stack {:?}&quot;, stack);
+</span><span class="boring">}</span></code></pre></pre>
+<p>Issue creating DLNodes: need <a href="https://doc.rust-lang.org/std/rc/struct.Rc.html">Weak</a></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="interior-mutability"><a class="header" href="#interior-mutability">Interior Mutability</a></h1>
+<p>Rust memory safety is based on two rules:</p>
+<ul>
+<li>An object <code>T</code> may have multiple <em>immutable</em> references (<code>&amp;T</code>)</li>
+<li><em>OR</em> an object may have exactly one <em>mutable</em> reference (`&amp;mut T)</li>
+</ul>
+<p>Sometimes you just need mutiple references that allow the object to be mutated.
+This is not necessarily bad, it is just difficult for the compiler to <em>prove</em>
+memory safety.</p>
+<p>Shareable mutable containers exist to permit controlled mutability, even in the
+presence of multiple references.</p>
+<dl>
+  <dt>Single-threaded
+  <dd>`std::cell:Cell<T>`, [std::cell::Refcell](https://doc.rust-lang.org/std/cell/struct.RefCell.html), and `OnceCell<T>`
+  <dd>Muti-threaded
+  <dd>`Mutex<T>`, `RwLock<T>`, and `OnceLock<T>`
+</dl>
+<p>These <a href="https://doc.rust-lang.org/std/cell/index.html">std::cell</a> types provide
+<em>interior mutability</em> (mutable via <code>&amp;T</code>), compared to most Rust types that
+exhibit <em>inherited mutability</em> (mutable only via <code>&amp;mut T</code>).</p>
+<h3 id="cell"><a class="header" href="#cell">Cell</a></h3>
+<p>Implements interior mutability by moving values into and out of the cell,
+i.e. you can <code>get</code> a copy of the object or you can <code>set</code> or <code>replace</code> the object
+with a new one.</p>
+<pre><pre class="playground"><code class="language-rust">use std::cell::Cell;
+
+struct Widget {
+    model: String,
+    version: (u8, u8, u8),
+    in_stock: Cell&lt;bool&gt;,
+}
+
+fn main() {
+    let product = Widget {  // Product is declared immutable here
+        model: &quot;Super Thing&quot;.to_string(),
+        version: (0, 9, 123),
+        in_stock: Cell::new(true),
+    };
+
+    // Finally sold it!
+    product.in_stock.set(false); // Tee-hee! We changed a field anyway!
+}</code></pre></pre>
+<h3 id="refcell"><a class="header" href="#refcell">RefCell</a></h3>
+<p><code>Box&lt;T&gt;</code> represents single ownership and inheritance mutability that is enforced
+at <em>compile</em> time. <code>RefCell&lt;T&gt;</code> supports interior mutability that is checked
+at <em>runtime</em>.</p>
+<pre><pre class="playground"><code class="language-rust">use std::cell::RefCell;
+use std::rc::Rc;
+
+struct EnterExitCounts { enter: u32, exit: u32 }
+
+impl EnterExitCounts {
+    fn new() -&gt; Self {
+        Self { enter: 0, exit: 0 }
+    }
+}
+
+struct House {
+    doors: [EnterExitCounts; 2] // Front and back doors in this house
+}
+
+fn main() {
+    // Immutable house_visitors owns the House on the heap
+   let house_visitors = Rc::new(RefCell::new(
+        House { doors: [EnterExitCounts::new(), EnterExitCounts::new()] }
+   ));
+
+   // The outside watcher needs to record what they see
+   let outside_watcher = Rc::clone(&amp;house_visitors);
+
+   outside_watcher.borrow_mut().doors[0].enter = 1; // See a person enter the front
+   outside_watcher.borrow_mut().doors[1].exit = 1; // and leave by the back
+
+   let visitors = house_visitors.borrow();
+   let inside = visitors.doors[0].enter - visitors.doors[0].exit
+              + visitors.doors[1].enter - visitors.doors[1].exit;
+   println!(&quot;{} people currently inside&quot;, inside);
+}</code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="doubly-linked-circular-list-take-two"><a class="header" href="#doubly-linked-circular-list-take-two">Doubly-linked Circular List (Take two)</a></h1>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::rc::{Rc, Weak};
+</span><span class="boring">use std::cell::RefCell;
+</span><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span>struct DLNode&lt;T&gt; {
+    next: Option&lt;StrongLink&lt;T&gt;&gt;,
+    prev: WeakLink&lt;T&gt;,
+    val: Option&lt;T&gt;,
+}
+
+type StrongLink&lt;T&gt; = Rc&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+type WeakLink&lt;T&gt; = Weak&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+
+impl&lt;T: std::default::Default&gt; DLNode&lt;T&gt; {
+    fn new(val: T, next: Option&lt;StrongLink&lt;T&gt;&gt;, prev: WeakLink&lt;T&gt;) -&gt; RefCell&lt;DLNode&lt;T&gt;&gt; {
+        RefCell::new(DLNode { next, prev, val: Some(val) })
+    }
+
+    fn empty() -&gt; Rc&lt;RefCell&lt;Self&gt;&gt; {
+        Rc::new_cyclic(|me| {
+            RefCell::new(DLNode {
+                next: None,
+                prev: me.clone(),
+                val: None,
+            })
+        })
+    }
+}
+
+struct DList&lt;T&gt; {
+    root: StrongLink&lt;T&gt;,
+}
+<span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display + std::fmt::Debug&gt; fmt::Display for DList&lt;T&gt; {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        write!(f, &quot;[&quot;)?;
+</span><span class="boring">        let mut curr = Rc::clone(self.root.borrow().next.as_ref().unwrap());
+</span><span class="boring">        loop {     
+</span><span class="boring">            let tmp = curr;
+</span><span class="boring">            match &amp;tmp.borrow().val {
+</span><span class="boring">                Some(val) =&gt; {
+</span><span class="boring">                    write!(f, &quot;{} &quot;, val)?;
+</span><span class="boring">                    // This is to check that we haven't done excessive cloning
+</span><span class="boring">                    let count = Rc::strong_count(&amp;tmp);
+</span><span class="boring">                    if count &gt; 2 {
+</span><span class="boring">                        write!(f, &quot;strong count {}! &quot;, count)?;
+</span><span class="boring">                    }
+</span><span class="boring">                },
+</span><span class="boring">                None =&gt; {
+</span><span class="boring">                    break;
+</span><span class="boring">                },
+</span><span class="boring">            };
+</span><span class="boring">            curr = Rc::clone(&amp;tmp.borrow().next.as_ref().unwrap());
+</span><span class="boring">        }
+</span><span class="boring">        write!(f, &quot;]&quot;)
+</span><span class="boring">    }
+</span><span class="boring">}  
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::default::Default + std::clone::Clone&gt; DList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; DList&lt;T&gt; {
+</span><span class="boring">        DList {
+</span><span class="boring">            root: {
+</span><span class="boring">                let node = DLNode::&lt;T&gt;::empty();
+</span><span class="boring">                node.borrow_mut().next = Some(Rc::clone(&amp;node));
+</span><span class="boring">                node
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn push(&amp;mut self, val: T) {
+</span><span class="boring">        // create the new node; node-&gt;prev = root
+</span><span class="boring">        let node = Rc::new(DLNode::new(val, None, Rc::downgrade(&amp;self.root)));
+</span><span class="boring">
+</span><span class="boring">        let node_clone = Rc::clone(&amp;node);
+</span><span class="boring">        // next = root-&gt;next; root-&gt;next = node; 
+</span><span class="boring">        let next = mem::replace(&amp;mut self.root.borrow_mut().next, Some(node));
+</span><span class="boring">
+</span><span class="boring">        // next-&gt;prev = node
+</span><span class="boring">        next.as_ref().unwrap().borrow_mut().prev = Rc::downgrade(&amp;node_clone);
+</span><span class="boring">
+</span><span class="boring">        // node-&gt;next = next
+</span><span class="boring">        node_clone.borrow_mut().next = next;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn pop(&amp;mut self) -&gt; Option&lt;T&gt; {
+</span><span class="boring">        // if root-&gt;next-&gt;val == None -&gt; empty list!
+</span><span class="boring">        if self.root.borrow().next.as_ref().unwrap().borrow().val.is_none() {
+</span><span class="boring">            return None
+</span><span class="boring">        }
+</span><span class="boring">
+</span><span class="boring">        // node = root-&gt;next
+</span><span class="boring">        let node = mem::take(&amp;mut self.root.borrow_mut().next).unwrap();
+</span><span class="boring">
+</span><span class="boring">        // val has to be copied out of node because it is about to be dropped
+</span><span class="boring">        let val = node.borrow().val.clone();
+</span><span class="boring">
+</span><span class="boring">        // next = node-&gt;next
+</span><span class="boring">        let next_owner = Rc::clone(&amp;node.borrow().next.as_ref().unwrap());
+</span><span class="boring">
+</span><span class="boring">        // next-&gt;prev = node-&gt;prev (= root)
+</span><span class="boring">        mem::swap(&amp;mut next_owner.borrow_mut().prev, &amp;mut node.borrow_mut().prev);
+</span><span class="boring">        // root-&gt;next = node-&gt;next
+</span><span class="boring">        self.root.borrow_mut().next = Some(next_owner);
+</span><span class="boring">
+</span><span class="boring">        val
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = DList::new();
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;size {} &quot;, mem::size_of::&lt;DLNode&lt;i32&gt;&gt;());
+</span><span class="boring">    println!(&quot;empty stack {}&quot;, stack);
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    println!(&quot;first stack {}&quot;, stack);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    println!(&quot;second stack {}&quot;, stack);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;last stack {}&quot;, stack);
+</span><span class="boring">
+</span><span class="boring">    let mut v = stack.pop();
+</span><span class="boring">    println!(&quot;first pop {}, stack {}&quot;, v.unwrap(), stack);
+</span><span class="boring">    v = stack.pop();
+</span><span class="boring">    println!(&quot;next pop {}, stack {}&quot;, v.unwrap(), stack);
+</span><span class="boring">}</span></code></pre></pre>
+<p>Implement <code>push</code> and <code>pop</code></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::rc::{Rc, Weak};
+</span><span class="boring">use std::cell::RefCell;
+</span><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">struct DLNode&lt;T&gt; {
+</span><span class="boring">    next: Option&lt;StrongLink&lt;T&gt;&gt;,
+</span><span class="boring">    prev: WeakLink&lt;T&gt;,
+</span><span class="boring">    val: Option&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">type StrongLink&lt;T&gt; = Rc&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+</span><span class="boring">type WeakLink&lt;T&gt; = Weak&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::default::Default&gt; DLNode&lt;T&gt; {
+</span><span class="boring">    fn new(val: T, next: Option&lt;StrongLink&lt;T&gt;&gt;, prev: WeakLink&lt;T&gt;) -&gt; RefCell&lt;DLNode&lt;T&gt;&gt; {
+</span><span class="boring">        RefCell::new(DLNode { next, prev, val: Some(val) })
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn empty() -&gt; Rc&lt;RefCell&lt;Self&gt;&gt; {
+</span><span class="boring">        Rc::new_cyclic(|me| {
+</span><span class="boring">            RefCell::new(DLNode {
+</span><span class="boring">                next: None,
+</span><span class="boring">                prev: me.clone(),
+</span><span class="boring">                val: None,
+</span><span class="boring">            })
+</span><span class="boring">        })
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct DList&lt;T&gt; {
+</span><span class="boring">    root: StrongLink&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display + std::fmt::Debug&gt; fmt::Display for DList&lt;T&gt; {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        write!(f, &quot;[&quot;)?;
+</span><span class="boring">        let mut curr = Rc::clone(self.root.borrow().next.as_ref().unwrap());
+</span><span class="boring">        loop {     
+</span><span class="boring">            let tmp = curr;
+</span><span class="boring">            match &amp;tmp.borrow().val {
+</span><span class="boring">                Some(val) =&gt; {
+</span><span class="boring">                    write!(f, &quot;{} &quot;, val)?;
+</span><span class="boring">                    // This is to check that we haven't done excessive cloning
+</span><span class="boring">                    let count = Rc::strong_count(&amp;tmp);
+</span><span class="boring">                    if count &gt; 2 {
+</span><span class="boring">                        write!(f, &quot;strong count {}! &quot;, count)?;
+</span><span class="boring">                    }
+</span><span class="boring">                },
+</span><span class="boring">                None =&gt; {
+</span><span class="boring">                    break;
+</span><span class="boring">                },
+</span><span class="boring">            };
+</span><span class="boring">            curr = Rc::clone(&amp;tmp.borrow().next.as_ref().unwrap());
+</span><span class="boring">        }
+</span><span class="boring">        write!(f, &quot;]&quot;)
+</span><span class="boring">    }
+</span><span class="boring">}  
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::default::Default + std::clone::Clone&gt; DList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; DList&lt;T&gt; {
+</span><span class="boring">        DList {
+</span><span class="boring">            root: {
+</span><span class="boring">                let node = DLNode::&lt;T&gt;::empty();
+</span><span class="boring">                node.borrow_mut().next = Some(Rc::clone(&amp;node));
+</span><span class="boring">                node
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span>    fn push(&amp;mut self, val: T) {
+        // create the new node; node-&gt;prev = root
+        let node = Rc::new(DLNode::new(val, None, Rc::downgrade(&amp;self.root)));
+
+        let node_clone = Rc::clone(&amp;node);
+        // next = root-&gt;next; root-&gt;next = node; 
+        let next = mem::replace(&amp;mut self.root.borrow_mut().next, Some(node));
+
+        // next-&gt;prev = node
+        next.as_ref().unwrap().borrow_mut().prev = Rc::downgrade(&amp;node_clone);
+
+        // node-&gt;next = next
+        node_clone.borrow_mut().next = next;
+    }
+
+    fn pop(&amp;mut self) -&gt; Option&lt;T&gt; {
+        // if root-&gt;next-&gt;val == None -&gt; empty list!
+        if self.root.borrow().next.as_ref().unwrap().borrow().val.is_none() {
+            return None
+        }
+
+        // node = root-&gt;next
+        let node = mem::take(&amp;mut self.root.borrow_mut().next).unwrap();
+
+        // val has to be copied out of node because it is about to be dropped
+        let val = node.borrow().val.clone();
+
+        // next = node-&gt;next
+        let next_owner = Rc::clone(&amp;node.borrow().next.as_ref().unwrap());
+
+        // next-&gt;prev = node-&gt;prev (= root)
+        mem::swap(&amp;mut next_owner.borrow_mut().prev, &amp;mut node.borrow_mut().prev);
+        // root-&gt;next = node-&gt;next
+        self.root.borrow_mut().next = Some(next_owner);
+
+        val
+    }
+<span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = DList::new();
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;size {} &quot;, mem::size_of::&lt;DLNode&lt;i32&gt;&gt;());
+</span><span class="boring">    println!(&quot;empty stack {}&quot;, stack);
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    println!(&quot;first stack {}&quot;, stack);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    println!(&quot;second stack {}&quot;, stack);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;last stack {}&quot;, stack);
+</span><span class="boring">
+</span><span class="boring">    let mut v = stack.pop();
+</span><span class="boring">    println!(&quot;first pop {}, stack {}&quot;, v.unwrap(), stack);
+</span><span class="boring">    v = stack.pop();
+</span><span class="boring">    println!(&quot;next pop {}, stack {}&quot;, v.unwrap(), stack);
+</span><span class="boring">}</span></code></pre></pre>
+<p>The <code>fmt::Display</code> trait was much harder than I thought</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::rc::{Rc, Weak};
+</span><span class="boring">use std::cell::RefCell;
+</span><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">struct Token&lt;T: std::fmt::Display&gt; {
+</span><span class="boring">    token: Option&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; Token&lt;T&gt; {
+</span><span class="boring">    fn new(token: Option&lt;T&gt;) -&gt; Self {
+</span><span class="boring">        if let Some(ref t) = token {
+</span><span class="boring">            println!(&quot;NEW token {}&quot;, t);
+</span><span class="boring">        }
+</span><span class="boring">        Self { token }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; Drop for Token&lt;T&gt; {
+</span><span class="boring">    fn drop(&amp;mut self) {
+</span><span class="boring">        match &amp;self.token {
+</span><span class="boring">            Some(t) =&gt; {
+</span><span class="boring">                println!(&quot;DROP token {}&quot;, t);
+</span><span class="boring">            }
+</span><span class="boring">            None =&gt; {
+</span><span class="boring">                println!(&quot;DROP ROOT!&quot;);
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct DLNode&lt;T: std::fmt::Display&gt; {
+</span><span class="boring">    next: Option&lt;StrongLink&lt;T&gt;&gt;,
+</span><span class="boring">    prev: WeakLink&lt;T&gt;,
+</span><span class="boring">    val: Option&lt;T&gt;,
+</span><span class="boring">    token: Token&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">type StrongLink&lt;T&gt; = Rc&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+</span><span class="boring">type WeakLink&lt;T&gt; = Weak&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display + Clone&gt; DLNode&lt;T&gt; {
+</span><span class="boring">    fn new(val: T, next: Option&lt;StrongLink&lt;T&gt;&gt;, prev: WeakLink&lt;T&gt;) -&gt; RefCell&lt;DLNode&lt;T&gt;&gt; {
+</span><span class="boring">        RefCell::new(DLNode { next, prev,
+</span><span class="boring">                              val: Some(val.clone()),
+</span><span class="boring">                              token: Token::new(Some(val))
+</span><span class="boring">        })
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn empty() -&gt; Rc&lt;RefCell&lt;Self&gt;&gt; {
+</span><span class="boring">        Rc::new_cyclic(|me| {
+</span><span class="boring">            RefCell::new(DLNode {
+</span><span class="boring">                next: None,
+</span><span class="boring">                prev: me.clone(),
+</span><span class="boring">                val: None,
+</span><span class="boring">                token: Token::new(None),
+</span><span class="boring">            })
+</span><span class="boring">        })
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct DList&lt;T: std::fmt::Display&gt; {
+</span><span class="boring">    root: StrongLink&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span>impl&lt;T: std::fmt::Display&gt; fmt::Display for DList&lt;T&gt; {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+        write!(f, &quot;[&quot;)?;
+        let mut curr = &amp;self.root.borrow().next.as_ref().unwrap();
+        loop {     
+            let tmp = curr;
+            match &amp;tmp.borrow().val {
+                Some(val) =&gt; {
+                    write!(f, &quot;{} &quot;, val)?;
+                    // This is to check that we haven't done excessive cloning
+                    let count = Rc::strong_count(&amp;tmp);
+                    if count &gt; 2 {
+                        write!(f, &quot;strong count {}! &quot;, count)?;
+                    }
+                },
+                None =&gt; {
+                    break;
+                },
+            };
+            curr = &amp;tmp.borrow().next.as_ref().unwrap();
+        }
+        write!(f, &quot;]&quot;)
+    }
+}  
+<span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display + std::clone::Clone&gt; DList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; DList&lt;T&gt; {
+</span><span class="boring">        DList {
+</span><span class="boring">            root: {
+</span><span class="boring">                let node = DLNode::&lt;T&gt;::empty();
+</span><span class="boring">                node.borrow_mut().next = Some(Rc::clone(&amp;node));
+</span><span class="boring">                node
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn push(&amp;mut self, val: T) {
+</span><span class="boring">        // create the new node; node-&gt;prev = root
+</span><span class="boring">        let node = Rc::new(DLNode::new(val, None, Rc::downgrade(&amp;self.root)));
+</span><span class="boring">
+</span><span class="boring">        let node_clone = Rc::clone(&amp;node);
+</span><span class="boring">        // next = root-&gt;next; root-&gt;next = node; 
+</span><span class="boring">        let next = mem::replace(&amp;mut self.root.borrow_mut().next, Some(node));
+</span><span class="boring">
+</span><span class="boring">        // next-&gt;prev = node
+</span><span class="boring">        next.as_ref().unwrap().borrow_mut().prev = Rc::downgrade(&amp;node_clone);
+</span><span class="boring">
+</span><span class="boring">        // node-&gt;next = next
+</span><span class="boring">        node_clone.borrow_mut().next = next;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn pop(&amp;mut self) -&gt; T {
+</span><span class="boring">        // node = root-&gt;next
+</span><span class="boring">        let node = mem::take(&amp;mut self.root.borrow_mut().next).unwrap();
+</span><span class="boring">
+</span><span class="boring">        // val has to be copied out of node because it is about to be dropped
+</span><span class="boring">        let val = node.borrow().val.as_ref().unwrap().clone();
+</span><span class="boring">
+</span><span class="boring">        // next = node-&gt;next
+</span><span class="boring">        let next_owner = Rc::clone(&amp;node.borrow().next.as_ref().unwrap());
+</span><span class="boring">
+</span><span class="boring">        // next-&gt;prev = node-&gt;prev (= root)
+</span><span class="boring">        mem::swap(&amp;mut next_owner.borrow_mut().prev, &amp;mut node.borrow_mut().prev);
+</span><span class="boring">        // root-&gt;next = node-&gt;next
+</span><span class="boring">        self.root.borrow_mut().next = Some(next_owner);
+</span><span class="boring">
+</span><span class="boring">        val
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = DList::new();
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;empty stack {}&quot;, stack);
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    println!(&quot;first stack {}&quot;, stack);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    println!(&quot;second stack {}&quot;, stack);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;last stack {}&quot;, stack);
+</span><span class="boring">
+</span><span class="boring">    let mut v = stack.pop();
+</span><span class="boring">    println!(&quot;first pop {}, stack {}&quot;, v, stack);
+</span><span class="boring">    v = stack.pop();
+</span><span class="boring">    println!(&quot;next pop {}, stack {}&quot;, v, stack);
+</span><span class="boring">}</span></code></pre></pre>
+<p>Note the checks that we didn't do excessive cloning</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::rc::{Rc, Weak};
+</span><span class="boring">use std::cell::RefCell;
+</span><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">struct Token&lt;T: std::fmt::Display&gt; {
+</span><span class="boring">    token: Option&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; Token&lt;T&gt; {
+</span><span class="boring">    fn new(token: Option&lt;T&gt;) -&gt; Self {
+</span><span class="boring">        if let Some(ref t) = token {
+</span><span class="boring">            println!(&quot;NEW token {}&quot;, t);
+</span><span class="boring">        }
+</span><span class="boring">        Self { token }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; Drop for Token&lt;T&gt; {
+</span><span class="boring">    fn drop(&amp;mut self) {
+</span><span class="boring">        match &amp;self.token {
+</span><span class="boring">            Some(t) =&gt; {
+</span><span class="boring">                println!(&quot;DROP token {}&quot;, t);
+</span><span class="boring">            }
+</span><span class="boring">            None =&gt; {
+</span><span class="boring">                println!(&quot;DROP ROOT!&quot;);
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct DLNode&lt;T: std::fmt::Display&gt; {
+</span><span class="boring">    next: Option&lt;StrongLink&lt;T&gt;&gt;,
+</span><span class="boring">    prev: WeakLink&lt;T&gt;,
+</span><span class="boring">    val: Option&lt;T&gt;,
+</span><span class="boring">    token: Token&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">type StrongLink&lt;T&gt; = Rc&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+</span><span class="boring">type WeakLink&lt;T&gt; = Weak&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display + Clone&gt; DLNode&lt;T&gt; {
+</span><span class="boring">    fn new(val: T, next: Option&lt;StrongLink&lt;T&gt;&gt;, prev: WeakLink&lt;T&gt;) -&gt; RefCell&lt;DLNode&lt;T&gt;&gt; {
+</span><span class="boring">        RefCell::new(DLNode { next, prev,
+</span><span class="boring">                              val: Some(val.clone()),
+</span><span class="boring">                              token: Token::new(Some(val))
+</span><span class="boring">        })
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn empty() -&gt; Rc&lt;RefCell&lt;Self&gt;&gt; {
+</span><span class="boring">        Rc::new_cyclic(|me| {
+</span><span class="boring">            RefCell::new(DLNode {
+</span><span class="boring">                next: None,
+</span><span class="boring">                prev: me.clone(),
+</span><span class="boring">                val: None,
+</span><span class="boring">                token: Token::new(None),
+</span><span class="boring">            })
+</span><span class="boring">        })
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct DList&lt;T: std::fmt::Display&gt; {
+</span><span class="boring">    root: StrongLink&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span>impl&lt;T: std::fmt::Display&gt; fmt::Display for DList&lt;T&gt; {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+        write!(f, &quot;[&quot;)?;
+        let mut curr = Rc::clone(self.root.borrow().next.as_ref().unwrap());
+        loop {     
+            let tmp = curr;
+            match &amp;tmp.borrow().val {
+                Some(val) =&gt; {
+                    write!(f, &quot;{} &quot;, val)?;
+                    // This is to check that we haven't done excessive cloning
+                    let count = Rc::strong_count(&amp;tmp);
+                    if count &gt; 2 {
+                        write!(f, &quot;strong count {}! &quot;, count)?;
+                    }
+                },
+                None =&gt; {
+                    break;
+                },
+            };
+            curr = Rc::clone(&amp;tmp.borrow().next.as_ref().unwrap());
+        }
+        write!(f, &quot;]&quot;)
+    }
+}  
+<span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display + std::clone::Clone&gt; DList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; DList&lt;T&gt; {
+</span><span class="boring">        DList {
+</span><span class="boring">            root: {
+</span><span class="boring">                let node = DLNode::&lt;T&gt;::empty();
+</span><span class="boring">                node.borrow_mut().next = Some(Rc::clone(&amp;node));
+</span><span class="boring">                node
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn push(&amp;mut self, val: T) {
+</span><span class="boring">        // create the new node; node-&gt;prev = root
+</span><span class="boring">        let node = Rc::new(DLNode::new(val, None, Rc::downgrade(&amp;self.root)));
+</span><span class="boring">
+</span><span class="boring">        let node_clone = Rc::clone(&amp;node);
+</span><span class="boring">        // next = root-&gt;next; root-&gt;next = node; 
+</span><span class="boring">        let next = mem::replace(&amp;mut self.root.borrow_mut().next, Some(node));
+</span><span class="boring">
+</span><span class="boring">        // next-&gt;prev = node
+</span><span class="boring">        next.as_ref().unwrap().borrow_mut().prev = Rc::downgrade(&amp;node_clone);
+</span><span class="boring">
+</span><span class="boring">        // node-&gt;next = next
+</span><span class="boring">        node_clone.borrow_mut().next = next;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn pop(&amp;mut self) -&gt; T {
+</span><span class="boring">        // node = root-&gt;next
+</span><span class="boring">        let node = mem::take(&amp;mut self.root.borrow_mut().next).unwrap();
+</span><span class="boring">
+</span><span class="boring">        // val has to be copied out of node because it is about to be dropped
+</span><span class="boring">        let val = node.borrow().val.as_ref().unwrap().clone();
+</span><span class="boring">
+</span><span class="boring">        // next = node-&gt;next
+</span><span class="boring">        let next_owner = Rc::clone(&amp;node.borrow().next.as_ref().unwrap());
+</span><span class="boring">
+</span><span class="boring">        // next-&gt;prev = node-&gt;prev (= root)
+</span><span class="boring">        mem::swap(&amp;mut next_owner.borrow_mut().prev, &amp;mut node.borrow_mut().prev);
+</span><span class="boring">        // root-&gt;next = node-&gt;next
+</span><span class="boring">        self.root.borrow_mut().next = Some(next_owner);
+</span><span class="boring">
+</span><span class="boring">        val
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = DList::new();
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;empty stack {}&quot;, stack);
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    println!(&quot;first stack {}&quot;, stack);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    println!(&quot;second stack {}&quot;, stack);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;last stack {}&quot;, stack);
+</span><span class="boring">
+</span><span class="boring">    let mut v = stack.pop();
+</span><span class="boring">    println!(&quot;first pop {}, stack {}&quot;, v, stack);
+</span><span class="boring">    v = stack.pop();
+</span><span class="boring">    println!(&quot;next pop {}, stack {}&quot;, v, stack);
+</span><span class="boring">}</span></code></pre></pre>
+<p>Implement the <code>Drop</code> trait to check that ownership is actually working</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::rc::{Rc, Weak};
+</span><span class="boring">use std::cell::RefCell;
+</span><span class="boring">use std::mem;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span>struct Token&lt;T: std::fmt::Display&gt; {
+    token: Option&lt;T&gt;,
+}
+
+impl&lt;T: std::fmt::Display&gt; Token&lt;T&gt; {
+    fn new(token: Option&lt;T&gt;) -&gt; Self {
+        if let Some(ref t) = token {
+            println!(&quot;NEW token {}&quot;, t);
+        }
+        Self { token }
+    }
+}
+
+impl&lt;T: std::fmt::Display&gt; Drop for Token&lt;T&gt; {
+    fn drop(&amp;mut self) {
+        match &amp;self.token {
+            Some(t) =&gt; {
+                println!(&quot;DROP token {}&quot;, t);
+            }
+            None =&gt; {
+                println!(&quot;DROP ROOT!&quot;);
+            }
+        }
+    }
+}
+
+struct DLNode&lt;T: std::fmt::Display&gt; {
+    next: Option&lt;StrongLink&lt;T&gt;&gt;,
+    prev: WeakLink&lt;T&gt;,
+    val: Option&lt;T&gt;,
+    token: Token&lt;T&gt;,
+}
+<span class="boring">
+</span><span class="boring">type StrongLink&lt;T&gt; = Rc&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+</span><span class="boring">type WeakLink&lt;T&gt; = Weak&lt;RefCell&lt;DLNode&lt;T&gt;&gt;&gt;;
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display + Clone&gt; DLNode&lt;T&gt; {
+</span><span class="boring">    fn new(val: T, next: Option&lt;StrongLink&lt;T&gt;&gt;, prev: WeakLink&lt;T&gt;) -&gt; RefCell&lt;DLNode&lt;T&gt;&gt; {
+</span><span class="boring">        RefCell::new(DLNode { next, prev,
+</span><span class="boring">                              val: Some(val.clone()),
+</span><span class="boring">                              token: Token::new(Some(val))
+</span><span class="boring">        })
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn empty() -&gt; Rc&lt;RefCell&lt;Self&gt;&gt; {
+</span><span class="boring">        Rc::new_cyclic(|me| {
+</span><span class="boring">            RefCell::new(DLNode {
+</span><span class="boring">                next: None,
+</span><span class="boring">                prev: me.clone(),
+</span><span class="boring">                val: None,
+</span><span class="boring">                token: Token::new(None),
+</span><span class="boring">            })
+</span><span class="boring">        })
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct DList&lt;T: std::fmt::Display&gt; {
+</span><span class="boring">    root: StrongLink&lt;T&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display&gt; fmt::Display for DList&lt;T&gt; {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        write!(f, &quot;[&quot;)?;
+</span><span class="boring">        let mut curr = Rc::clone(self.root.borrow().next.as_ref().unwrap());
+</span><span class="boring">        loop {     
+</span><span class="boring">            let tmp = curr;
+</span><span class="boring">            match &amp;tmp.borrow().val {
+</span><span class="boring">                Some(val) =&gt; {
+</span><span class="boring">                    write!(f, &quot;{} &quot;, val)?;
+</span><span class="boring">                    // This is to check that we haven't done excessive cloning
+</span><span class="boring">                    let count = Rc::strong_count(&amp;tmp);
+</span><span class="boring">                    if count &gt; 2 {
+</span><span class="boring">                        write!(f, &quot;strong count {}! &quot;, count)?;
+</span><span class="boring">                    }
+</span><span class="boring">                },
+</span><span class="boring">                None =&gt; {
+</span><span class="boring">                    break;
+</span><span class="boring">                },
+</span><span class="boring">            };
+</span><span class="boring">            curr = Rc::clone(&amp;tmp.borrow().next.as_ref().unwrap());
+</span><span class="boring">        }
+</span><span class="boring">        write!(f, &quot;]&quot;)
+</span><span class="boring">    }
+</span><span class="boring">}  
+</span><span class="boring">
+</span><span class="boring">impl&lt;T: std::fmt::Display + std::clone::Clone&gt; DList&lt;T&gt; {
+</span><span class="boring">    fn new() -&gt; DList&lt;T&gt; {
+</span><span class="boring">        DList {
+</span><span class="boring">            root: {
+</span><span class="boring">                let node = DLNode::&lt;T&gt;::empty();
+</span><span class="boring">                node.borrow_mut().next = Some(Rc::clone(&amp;node));
+</span><span class="boring">                node
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn push(&amp;mut self, val: T) {
+</span><span class="boring">        // create the new node; node-&gt;prev = root
+</span><span class="boring">        let node = Rc::new(DLNode::new(val, None, Rc::downgrade(&amp;self.root)));
+</span><span class="boring">
+</span><span class="boring">        let node_clone = Rc::clone(&amp;node);
+</span><span class="boring">        // next = root-&gt;next; root-&gt;next = node; 
+</span><span class="boring">        let next = mem::replace(&amp;mut self.root.borrow_mut().next, Some(node));
+</span><span class="boring">
+</span><span class="boring">        // next-&gt;prev = node
+</span><span class="boring">        next.as_ref().unwrap().borrow_mut().prev = Rc::downgrade(&amp;node_clone);
+</span><span class="boring">
+</span><span class="boring">        // node-&gt;next = next
+</span><span class="boring">        node_clone.borrow_mut().next = next;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn pop(&amp;mut self) -&gt; T {
+</span><span class="boring">        // node = root-&gt;next
+</span><span class="boring">        let node = mem::take(&amp;mut self.root.borrow_mut().next).unwrap();
+</span><span class="boring">
+</span><span class="boring">        // val has to be copied out of node because it is about to be dropped
+</span><span class="boring">        let val = node.borrow().val.as_ref().unwrap().clone();
+</span><span class="boring">
+</span><span class="boring">        // next = node-&gt;next
+</span><span class="boring">        let next_owner = Rc::clone(&amp;node.borrow().next.as_ref().unwrap());
+</span><span class="boring">
+</span><span class="boring">        // next-&gt;prev = node-&gt;prev (= root)
+</span><span class="boring">        mem::swap(&amp;mut next_owner.borrow_mut().prev, &amp;mut node.borrow_mut().prev);
+</span><span class="boring">        // root-&gt;next = node-&gt;next
+</span><span class="boring">        self.root.borrow_mut().next = Some(next_owner);
+</span><span class="boring">
+</span><span class="boring">        val
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut stack = DList::new();
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;empty stack {}&quot;, stack);
+</span><span class="boring">    stack.push(10);
+</span><span class="boring">    println!(&quot;first stack {}&quot;, stack);
+</span><span class="boring">    stack.push(2);
+</span><span class="boring">    println!(&quot;second stack {}&quot;, stack);
+</span><span class="boring">    stack.push(42);
+</span><span class="boring">    println!(&quot;last stack {}&quot;, stack);
+</span><span class="boring">
+</span><span class="boring">    let mut v = stack.pop();
+</span><span class="boring">    println!(&quot;first pop {}, stack {}&quot;, v, stack);
+</span><span class="boring">    v = stack.pop();
+</span><span class="boring">    println!(&quot;next pop {}, stack {}&quot;, v, stack);
+</span><span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="summary"><a class="header" href="#summary">Summary</a></h1>
+<table class="s-table">
+  <thead>
+    <tr>
+      <th>
+        Reference/
+        <br>
+        Pointer
+      </th>
+      <th>
+        Data
+        <br>
+        Location
+      </th>
+      <th>Mutable</th>
+      <th>
+        Shared
+        <br>
+        Ownership
+      </th>
+      <th>Safe</th>
+      <th>
+        impl
+        <br>
+        Copy
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <strong>&amp;T</strong>
+      </td>
+      <td>stack</td>
+      <td>❌</td>
+      <td>✔️️</td>
+      <td>✔️</td>
+      <td>✔️</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>&amp;mut T</strong>
+      </td>
+      <td>stack</td>
+      <td>✔️</td>
+      <td>❌</td>
+      <td>✔️</td>
+      <td>❌</td>
+    </tr>
+    <tr>
+      <td>
+        *
+        <strong>const T</strong>
+      </td>
+      <td>stack</td>
+      <td>❌</td>
+      <td>✔️</td>
+      <td>❌</td>
+      <td>✔️</td>
+    </tr>
+    <tr>
+      <td>
+        *
+        <strong>mut T</strong>
+      </td>
+      <td>stack</td>
+      <td>✔️</td>
+      <td>✔️</td>
+      <td>❌</td>
+      <td>✔️</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Box&lt;T&gt;</strong>
+      </td>
+      <td>heap</td>
+      <td>✔️</td>
+      <td>❌</td>
+      <td>✔️</td>
+      <td>❌</td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Rc&lt;T&gt;</strong>
+      </td>
+      <td>heap</td>
+      <td>❌</td>
+      <td>✔️</td>
+      <td>✔️</td>
+      <td>❌</td>
+    </tr>
+  </tbody>
+</table>
+<p>From <a href="https://stackoverflow.com/questions/31949579/understanding-and-relationship-between-box-ref-and/31953048#31953048">StackOverflow</a></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>
