@@ -10,12 +10,11 @@ memory safety.
 
 Shareable mutable containers exist to permit controlled mutability, even in the
 presence of multiple references.
-<dl>
-  <dt>Single-threaded
-  <dd>`std::cell:Cell<T>`, [std::cell::Refcell](https://doc.rust-lang.org/std/cell/struct.RefCell.html), and `OnceCell<T>`
-  <dd>Muti-threaded
-  <dd>`Mutex<T>`, `RwLock<T>`, and `OnceLock<T>`
-</dl>
+
+* Single-threaded
+  - `std::cell:Cell<T>`, [std::cell::Refcell](https://doc.rust-lang.org/std/cell/struct.RefCell.html), and `OnceCell<T>`
+* Muti-threaded
+  - `Mutex<T>`, `RwLock<T>`, and `OnceLock<T>`
 
 These [std::cell](https://doc.rust-lang.org/std/cell/index.html) types provide
 _interior mutability_ (mutable via `&T`), compared to most Rust types that

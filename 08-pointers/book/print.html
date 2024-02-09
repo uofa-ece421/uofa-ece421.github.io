@@ -646,12 +646,18 @@ This is not necessarily bad, it is just difficult for the compiler to <em>prove<
 memory safety.</p>
 <p>Shareable mutable containers exist to permit controlled mutability, even in the
 presence of multiple references.</p>
-<dl>
-  <dt>Single-threaded
-  <dd>`std::cell:Cell<T>`, [std::cell::Refcell](https://doc.rust-lang.org/std/cell/struct.RefCell.html), and `OnceCell<T>`
-  <dd>Muti-threaded
-  <dd>`Mutex<T>`, `RwLock<T>`, and `OnceLock<T>`
-</dl>
+<ul>
+<li>Single-threaded
+<ul>
+<li><code>std::cell:Cell&lt;T&gt;</code>, <a href="https://doc.rust-lang.org/std/cell/struct.RefCell.html">std::cell::Refcell</a>, and <code>OnceCell&lt;T&gt;</code></li>
+</ul>
+</li>
+<li>Muti-threaded
+<ul>
+<li><code>Mutex&lt;T&gt;</code>, <code>RwLock&lt;T&gt;</code>, and <code>OnceLock&lt;T&gt;</code></li>
+</ul>
+</li>
+</ul>
 <p>These <a href="https://doc.rust-lang.org/std/cell/index.html">std::cell</a> types provide
 <em>interior mutability</em> (mutable via <code>&amp;T</code>), compared to most Rust types that
 exhibit <em>inherited mutability</em> (mutable only via <code>&amp;mut T</code>).</p>
