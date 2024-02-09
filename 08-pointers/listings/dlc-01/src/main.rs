@@ -64,5 +64,5 @@ fn main() {
     stack.push(10);
     stack.push(2);
     stack.push(42);
-    println!("first stack {:?}", stack);
+    println!("first stack {}", stack);
 }
