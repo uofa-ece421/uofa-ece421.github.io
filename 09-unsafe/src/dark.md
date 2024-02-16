@@ -5,7 +5,7 @@ References:
 * [Unofficial Rust](https://github.com/rust-unofficial)
 * [Rust Book - Chapter 19.1](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html)
 
-** Unsafe Rust
+## Unsafe Rust
 
 Unsafe Rust exists because compiler analysis _must_ be conservative.
 The compiler must reject possibly valid programs when it can't prove the
