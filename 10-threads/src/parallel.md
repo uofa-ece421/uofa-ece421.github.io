@@ -12,7 +12,7 @@ Generally speaking, parallelism is hard, or to be more specific, achieving
 
 > <var>Speedup<sub>N</sub> = T(sequential)/T(parallel<sub>N</sub>)</var>
 
-Note that <var>T(sequential)</var> is typically _not_ <var>T(parallel<sub>1</sub></var>
+Note that <var>T(sequential)</var> is typically _not_ <var>T(parallel<sub>1</sub>)</var>
 
 **Amdahl's Law** (Speedup):
 
