@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="closures.html"><strong aria-hidden="true">1.</strong> Closures</a></li><li class="chapter-item expanded "><a href="cvp.html"><strong aria-hidden="true">2.</strong> Concurrency vs Parallelism</a></li><li class="chapter-item expanded "><a href="threads.html"><strong aria-hidden="true">3.</strong> Introduction to Threads</a></li><li class="chapter-item expanded "><a href="channels.html"><strong aria-hidden="true">4.</strong> Channels</a></li><li class="chapter-item expanded "><a href="request-response.html"><strong aria-hidden="true">5.</strong> Request/Response</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="closures.html"><strong aria-hidden="true">1.</strong> Closures</a></li><li class="chapter-item expanded "><a href="cvp.html"><strong aria-hidden="true">2.</strong> Concurrency vs Parallelism</a></li><li class="chapter-item expanded "><a href="threads.html"><strong aria-hidden="true">3.</strong> Introduction to Threads</a></li><li class="chapter-item expanded "><a href="channels.html"><strong aria-hidden="true">4.</strong> Channels</a></li><li class="chapter-item expanded "><a href="request-response.html"><strong aria-hidden="true">5.</strong> Request/Response</a></li><li class="chapter-item expanded "><a href="parallel.html"><strong aria-hidden="true">6.</strong> Parallelism</a></li><li class="chapter-item expanded "><a href="locks.html"><strong aria-hidden="true">7.</strong> Locks</a></li><li class="chapter-item expanded "><a href="quicksort.html"><strong aria-hidden="true">8.</strong> Parallelizing Quicksort</a></li><li class="chapter-item expanded "><a href="bench.html"><strong aria-hidden="true">9.</strong> Benchmarking and Tuning</a></li><li class="chapter-item expanded "><a href="pools.html"><strong aria-hidden="true">10.</strong> Thread Pools</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -389,6 +389,1031 @@ fn main() {
     let _ = server.join().expect(&quot;unexpected server panic&quot;);
 }
 </code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="parallel-programming"><a class="header" href="#parallel-programming">Parallel Programming</a></h1>
+<p>Parallel algorithms typically share data structures among multiple threads,
+with the goal of solving a single problem in less time.</p>
+<p>Data parallel algorithms can sometimes be classified <em>SIMD</em> (Single Instruction
+Multiple Data) because each thread performs the same algorithm on a different
+portion of the data.</p>
+<p>Generally speaking, parallelism is hard, or to be more specific, achieving
+<var>Speedup &gt; 1</var> is hard.</p>
+<blockquote>
+<p><var>Speedup<sub>N</sub> = T(sequential)/T(parallel<sub>N</sub>)</var></p>
+</blockquote>
+<p>Note that <var>T(sequential)</var> is typically <em>not</em> <var>T(parallel<sub>1</sub></var></p>
+<p><strong>Amdahl's Law</strong> (Speedup):</p>
+<blockquote>
+<p><var>S<sub>latency</sub>(s) = [(1 - p) + p/s]<sup>-1</sup></var></p>
+</blockquote>
+<p>where</p>
+<ul>
+<li><var>S<sub>latency</sub></var> is the theoretical speedup of the execution of the whole task</li>
+<li><var>s</var> is the speedup of the part that can be parallelized</li>
+<li><var>p</var> is the proportion that can be parallelized</li>
+</ul>
+<p>For example, if 90% of a sequential program can be parallelized,
+the best speedup you can get is <var>S</var> = 1/0.1 = 10 even if you managed to
+get the parallel execution time to zero!</p>
+<p><strong>Gustafson's Law</strong> (Scaleup):</p>
+<blockquote>
+<p><var>S = 1 + (N - 1)*p</var></p>
+</blockquote>
+<p>where</p>
+<ul>
+<li><var>N</var> is the number of processors used</li>
+</ul>
+<p>Gustafson's Law addresses the fact that most people increase the problem size
+as they increase the number of processors.</p>
+<p>For example, if you used 100 processors on a program that is 90% parallelizable,
+Gustafson's Law predicts a scaleup <var>S</var> = 1 + (100 - 1)*0.9 = 90.1</p>
+<p><strong>Inherent Costs of Parallelization</strong></p>
+<p>In addition to the sequential part that can't be parallelized, you have to
+minimize or amortize the expense of creating and coordinating threads:</p>
+<ul>
+<li>thread creation (<code>spawn</code>)</li>
+<li>thread communication, e.g. fork/join (barriers), events</li>
+<li>data integrity (locks)</li>
+<li>cache coherence and locality</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="using-locks"><a class="header" href="#using-locks">Using Locks</a></h1>
+<p>A <code>Mutex&lt;T&gt;</code> is a wraps a smart pointer called a <code>MutexGuard</code>, which implements
+the <code>Deref</code> and <code>Drop</code> traits. Rust supports for data integrity:</p>
+<ul>
+<li>must call <code>lock</code> before accessing the data protected by the mutex</li>
+<li>lock is automatically released when owner exits scope</li>
+</ul>
+<p>Rust is conservative about which data needs to be locked (e.g. globals).
+Note that locks, threads, etc are provided by the runtime - they are not
+intrinsically part of the language itself. Although Rust's ownership rules
+go a long way, Rust cannot detect deadlock or fix your performance problems!</p>
+<pre><pre class="playground"><code class="language-rust">use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
+
+fn main() {
+    let counter = Mutex::new(0);
+    let handle = thread::spawn(move || {
+        for i in 1..10 {
+            {
+                let mut val = counter.lock().unwrap();
+                *val = i;
+            }
+            println!(&quot;number {:?} from the spawned thread!&quot;, counter);
+            thread::sleep(Duration::from_millis(1));
+        }
+    });
+
+    handle.join().unwrap();
+    //println!(&quot;final number {:?} from main&quot;, counter);
+}</code></pre></pre>
+<pre><pre class="playground"><code class="language-rust">use std::rc::Rc;
+use std::sync::Mutex;
+use std::thread;
+
+fn main() {
+    let counter = Rc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        let counter = Rc::clone(&amp;counter);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+
+            *num += 1;
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!(&quot;Result: {}&quot;, *counter.lock().unwrap());
+}</code></pre></pre>
+<h3 id="send-and-sync"><a class="header" href="#send-and-sync"><code>Send</code> and <code>Sync</code></a></h3>
+<p><em>Send</em> is a marker trait that indicates that <em>ownership</em> of the value can be
+<code>move</code>d between threads.</p>
+<ul>
+<li>Almost every Rust type is <code>Send</code>, except for types explicity documented as not being thread-safe, e.g. <code>Rc&lt;T&gt;</code> and <code>RefCell&lt;T&gt;</code></li>
+<li>Any compound type composed entirely of <code>Send</code> types is also <code>Send</code>.</li>
+<li>A type <em>not</em> marked <code>Send</code> (e.g. raw pointers) can be passed between threads by writing an <code>unsafe</code> trait. In this case, the implementor is taking responsibility for making sure the transfer occurrs correctly.</li>
+</ul>
+<p><em>Sync</em> is a marker trait that indicates that the value can be referenced from
+multiple threads.</p>
+<ul>
+<li>A type <code>T</code> is <code>Sync</code> if <code>&amp;T</code> is <code>Send</code>.</li>
+<li>Any compound type composed entirely of <code>Sync</code> types is also <code>Sync</code>.</li>
+<li>You can also implement <code>unsafe</code> traits for types not marked <code>Sync</code>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="parallelizing-quicksort"><a class="header" href="#parallelizing-quicksort">Parallelizing Quicksort</a></h1>
+<h3 id="sequential-quicksort"><a class="header" href="#sequential-quicksort">Sequential Quicksort</a></h3>
+<p>Works by partitioning the data into two halves, such that the values below the
+<em>pivot</em> index are all less than the values above the pivot.</p>
+<p>Then it recursively calls itself on the two partitions.</p>
+<p>The average complexity is <var>O(n*log<sub>2</sub>n)</var> and the worst case
+is <var>O(n<sup>2</sup>)</var>, which happens when the data is already sorted.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">extern crate rand;
+</span><span class="boring">
+</span><span class="boring">use std::env;
+</span><span class="boring">use std::thread;
+</span><span class="boring">use rand::Rng;
+</span><span class="boring">use std::time::Instant;
+</span><span class="boring">use std::convert::TryInto;
+</span><span class="boring">
+</span>fn quicksort&lt;T: PartialOrd&gt;(v: &amp;mut [T]) {
+    if v.len() &lt;= 1 {
+        return;
+    }
+
+    let mid = partition(v);
+    let (lo, hi) = v.split_at_mut(mid);
+    quicksort(lo);
+    quicksort(hi);
+}
+
+fn partition&lt;T: PartialOrd&gt;(v: &amp;mut [T]) -&gt; usize {
+    let hi = v.len() - 1;
+    let lo = 0;
+    let pivot = hi;
+
+    let mut i = 0;
+    for j in lo..hi {
+        if v[j] &lt;= v[pivot] {
+            v.swap(i, j);
+            i += 1;
+        }
+    }
+    v.swap(i, pivot);
+    i
+}
+<span class="boring">
+</span><span class="boring">fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) {
+</span><span class="boring">    if v.len() &lt;= 1 {
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    if v.len() &lt; 2048 { // At some point it won't pay to start more threads
+</span><span class="boring">        quicksort(v);
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    let mid = partition(v);
+</span><span class="boring">    let (lo, hi) = v.split_at_mut(mid);
+</span><span class="boring">
+</span><span class="boring">    let lo_handle = thread::spawn(move || { parallel_quicksort(lo) });
+</span><span class="boring">    let hi_handle = thread::spawn(move || { parallel_quicksort(hi) });
+</span><span class="boring">
+</span><span class="boring">    lo_handle.join().unwrap();
+</span><span class="boring">    hi_handle.join().unwrap();
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn initialize_data(len: usize) -&gt; Vec&lt;u32&gt; {
+</span><span class="boring">    let mut data = Vec::with_capacity(len);
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">
+</span><span class="boring">    data.resize(len, 0);
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        data[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">    data
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn reinitialize_data(v: &amp;mut [u32]) {
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">    let len = v.len();
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        v[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">    
+</span><span class="boring">fn main() {
+</span><span class="boring">    let args: Vec&lt;String&gt; = env::args().collect();
+</span><span class="boring">
+</span><span class="boring">    let len = match args.get(1) {
+</span><span class="boring">        Some(slen) =&gt; match slen.parse::&lt;usize&gt;() {
+</span><span class="boring">            Ok(num) =&gt; num,
+</span><span class="boring">            Err(e) =&gt; {
+</span><span class="boring">                println!(&quot;bad length: {}&quot;, e);
+</span><span class="boring">                return;
+</span><span class="boring">            }
+</span><span class="boring">        },
+</span><span class="boring">        None =&gt; {
+</span><span class="boring">            println!(&quot;Using default length {}&quot;, 1000000);
+</span><span class="boring">            1000000 as usize
+</span><span class="boring">        }
+</span><span class="boring">    };
+</span><span class="boring">        
+</span><span class="boring">    let mut data = initialize_data(len);
+</span><span class="boring">
+</span><span class="boring">    let start = Instant::now();
+</span><span class="boring">    parallel_quicksort(&amp;mut data);
+</span><span class="boring">    let elapsed = Instant::now() - start;
+</span><span class="boring">
+</span><span class="boring">    let parallel_usec = u64::from(elapsed.subsec_micros()) + elapsed.as_secs()*1000000u64;
+</span><span class="boring">    println!(&quot;sorted {} values in parallel in {} usec&quot;, len, parallel_usec);  
+</span><span class="boring">
+</span><span class="boring">    if !data.windows(2).all(|w| w[0] &lt;= w[1]) {
+</span><span class="boring">        println!(&quot;sort failed!&quot;);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    reinitialize_data(&amp;mut data);
+</span><span class="boring">
+</span><span class="boring">    let start = Instant::now();
+</span><span class="boring">    quicksort(&amp;mut data);
+</span><span class="boring">    let elapsed = Instant::now() - start;
+</span><span class="boring">
+</span><span class="boring">    let sequential_usec = u64::from(elapsed.subsec_micros()) + elapsed.as_secs()*1000000u64;
+</span><span class="boring">    println!(&quot;sorted {} values in {} usec&quot;, len, sequential_usec);  
+</span><span class="boring">    
+</span><span class="boring">    if !data.windows(2).all(|w| w[0] &lt;= w[1]) {
+</span><span class="boring">        println!(&quot;sort failed!&quot;);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;speedup: {}&quot;, (sequential_usec as f64)/(parallel_usec as f64));
+</span><span class="boring">}</span></code></pre></pre>
+<p>Since the two halves are disjoint we don't even need locks!</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">extern crate rand;
+</span><span class="boring">
+</span><span class="boring">use std::env;
+</span><span class="boring">use std::thread;
+</span><span class="boring">use rand::Rng;
+</span><span class="boring">use std::time::Instant;
+</span><span class="boring">use std::convert::TryInto;
+</span><span class="boring">
+</span><span class="boring">fn quicksort&lt;T: PartialOrd&gt;(v: &amp;mut [T]) {
+</span><span class="boring">    if v.len() &lt;= 1 {
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    let mid = partition(v);
+</span><span class="boring">    let (lo, hi) = v.split_at_mut(mid);
+</span><span class="boring">    quicksort(lo);
+</span><span class="boring">    quicksort(hi);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn partition&lt;T: PartialOrd&gt;(v: &amp;mut [T]) -&gt; usize {
+</span><span class="boring">    let hi = v.len() - 1;
+</span><span class="boring">    let lo = 0;
+</span><span class="boring">    let pivot = hi;
+</span><span class="boring">
+</span><span class="boring">    let mut i = 0;
+</span><span class="boring">    for j in lo..hi {
+</span><span class="boring">        if v[j] &lt;= v[pivot] {
+</span><span class="boring">            v.swap(i, j);
+</span><span class="boring">            i += 1;
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">    v.swap(i, pivot);
+</span><span class="boring">    i
+</span><span class="boring">}
+</span><span class="boring">
+</span>fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) {
+    if v.len() &lt;= 1 {
+        return;
+    }
+
+    if v.len() &lt; 2048 { // At some point it won't pay to start more threads
+        quicksort(v);
+        return;
+    }
+
+    let mid = partition(v);
+    let (lo, hi) = v.split_at_mut(mid);
+
+    let lo_handle = thread::spawn(move || { parallel_quicksort(lo) });
+    let hi_handle = thread::spawn(move || { parallel_quicksort(hi) });
+
+    lo_handle.join().unwrap();
+    hi_handle.join().unwrap();
+}
+<span class="boring">
+</span><span class="boring">fn initialize_data(len: usize) -&gt; Vec&lt;u32&gt; {
+</span><span class="boring">    let mut data = Vec::with_capacity(len);
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">
+</span><span class="boring">    data.resize(len, 0);
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        data[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">    data
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn reinitialize_data(v: &amp;mut [u32]) {
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">    let len = v.len();
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        v[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">    
+</span><span class="boring">fn main() {
+</span><span class="boring">    let args: Vec&lt;String&gt; = env::args().collect();
+</span><span class="boring">
+</span><span class="boring">    let len = match args.get(1) {
+</span><span class="boring">        Some(slen) =&gt; match slen.parse::&lt;usize&gt;() {
+</span><span class="boring">            Ok(num) =&gt; num,
+</span><span class="boring">            Err(e) =&gt; {
+</span><span class="boring">                println!(&quot;bad length: {}&quot;, e);
+</span><span class="boring">                return;
+</span><span class="boring">            }
+</span><span class="boring">        },
+</span><span class="boring">        None =&gt; {
+</span><span class="boring">            println!(&quot;Using default length {}&quot;, 1000000);
+</span><span class="boring">            1000000 as usize
+</span><span class="boring">        }
+</span><span class="boring">    };
+</span><span class="boring">        
+</span><span class="boring">    let mut data = initialize_data(len);
+</span><span class="boring">
+</span><span class="boring">    let start = Instant::now();
+</span><span class="boring">    parallel_quicksort(&amp;mut data);
+</span><span class="boring">    let elapsed = Instant::now() - start;
+</span><span class="boring">
+</span><span class="boring">    let parallel_usec = u64::from(elapsed.subsec_micros()) + elapsed.as_secs()*1000000u64;
+</span><span class="boring">    println!(&quot;sorted {} values in parallel in {} usec&quot;, len, parallel_usec);  
+</span><span class="boring">
+</span><span class="boring">    if !data.windows(2).all(|w| w[0] &lt;= w[1]) {
+</span><span class="boring">        println!(&quot;sort failed!&quot;);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    reinitialize_data(&amp;mut data);
+</span><span class="boring">
+</span><span class="boring">    let start = Instant::now();
+</span><span class="boring">    quicksort(&amp;mut data);
+</span><span class="boring">    let elapsed = Instant::now() - start;
+</span><span class="boring">
+</span><span class="boring">    let sequential_usec = u64::from(elapsed.subsec_micros()) + elapsed.as_secs()*1000000u64;
+</span><span class="boring">    println!(&quot;sorted {} values in {} usec&quot;, len, sequential_usec);  
+</span><span class="boring">    
+</span><span class="boring">    if !data.windows(2).all(|w| w[0] &lt;= w[1]) {
+</span><span class="boring">        println!(&quot;sort failed!&quot;);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;speedup: {}&quot;, (sequential_usec as f64)/(parallel_usec as f64));
+</span><span class="boring">}</span></code></pre></pre>
+<p>To get around the lifetime problem, use <em>scoped</em> threads from <code>crossbeam</code></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">extern crate rand;
+</span><span class="boring">
+</span><span class="boring">use std::env;
+</span><span class="boring">use rand::Rng;
+</span><span class="boring">use std::time::Instant;
+</span><span class="boring">use std::convert::TryInto;
+</span><span class="boring">
+</span><span class="boring">const MILLION: usize = 1024*1024;
+</span><span class="boring">
+</span><span class="boring">fn quicksort&lt;T: PartialOrd&gt;(v: &amp;mut [T]) {
+</span><span class="boring">    if v.len() &lt;= 1 {
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    let mid = partition(v);
+</span><span class="boring">    let (lo, hi) = v.split_at_mut(mid);
+</span><span class="boring">    quicksort(lo);
+</span><span class="boring">    quicksort(hi);
+</span><span class="boring">}
+</span><span class="boring">
+</span>fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) {
+    if v.len() &lt;= 1 {
+        return;
+    }
+
+    if v.len() &lt;= 2048 {
+        quicksort(v);
+        return;
+    }
+
+    crossbeam::scope(|scope| {
+        let mid = partition(v);
+        let (lo, hi) = v.split_at_mut(mid);
+        scope.spawn(move |_| parallel_quicksort(lo));
+        scope.spawn(move |_| parallel_quicksort(hi));
+    }).expect(&quot;thread spawn failed&quot;);
+}
+<span class="boring">
+</span><span class="boring">fn partition&lt;T: PartialOrd&gt;(v: &amp;mut [T]) -&gt; usize {
+</span><span class="boring">    let hi = v.len() - 1;
+</span><span class="boring">    let lo = 0;
+</span><span class="boring">    let pivot = hi;
+</span><span class="boring">
+</span><span class="boring">    let mut i = 0;
+</span><span class="boring">    for j in lo..hi {
+</span><span class="boring">        if v[j] &lt;= v[pivot] {
+</span><span class="boring">            v.swap(i, j);
+</span><span class="boring">            i += 1;
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">    v.swap(i, pivot);
+</span><span class="boring">    i
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn initialize_data(len: usize) -&gt; Vec&lt;u32&gt; {
+</span><span class="boring">    let mut data = Vec::with_capacity(len);
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">
+</span><span class="boring">    data.resize(len, 0);
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        data[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">    data
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn reinitialize_data(v: &amp;mut [u32]) {
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">    let len = v.len();
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        v[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn bench&lt;F: FnOnce(&amp;mut [u32])&gt;(sort: F, data: &amp;mut [u32]) -&gt; u64 {
+</span><span class="boring">    reinitialize_data(data);
+</span><span class="boring">
+</span><span class="boring">    let start = Instant::now();
+</span><span class="boring">    sort(data);
+</span><span class="boring">    let elapsed = Instant::now() - start;
+</span><span class="boring">
+</span><span class="boring">    if !data.windows(2).all(|w| w[0] &lt;= w[1]) {
+</span><span class="boring">        println!(&quot;sort failed!&quot;);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    u64::from(elapsed.subsec_micros()) + elapsed.as_secs()*1000000u64
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let args: Vec&lt;String&gt; = env::args().collect();
+</span><span class="boring">
+</span><span class="boring">    // First argument is the vector length
+</span><span class="boring">    let len = match args.get(1) {
+</span><span class="boring">        Some(slen) =&gt; match slen.parse::&lt;usize&gt;() {
+</span><span class="boring">            Ok(num) =&gt; num,
+</span><span class="boring">            Err(e) =&gt; {
+</span><span class="boring">                println!(&quot;ignoring bad length: {}&quot;, e);
+</span><span class="boring">                MILLION as usize
+</span><span class="boring">            }
+</span><span class="boring">        },
+</span><span class="boring">        None =&gt; MILLION as usize,
+</span><span class="boring">    };
+</span><span class="boring">
+</span><span class="boring">    let mut data = initialize_data(len);
+</span><span class="boring">
+</span><span class="boring">    let mut par_mean: f64 = 0.0;
+</span><span class="boring">    for run in 0..10 {
+</span><span class="boring">        let elapsed = bench(parallel_quicksort, &amp;mut data);
+</span><span class="boring">        println!(&quot;parallel {}: {} usec&quot;, run, elapsed);
+</span><span class="boring">        par_mean += elapsed as f64;
+</span><span class="boring">    }
+</span><span class="boring">    par_mean /= 10.0;
+</span><span class="boring">    println!(&quot;parallel mean: {} usec&quot;, par_mean);
+</span><span class="boring">
+</span><span class="boring">    let mut seq_mean: f64 = 0.0;
+</span><span class="boring">    for run in 0..10 {
+</span><span class="boring">        let elapsed = bench(quicksort, &amp;mut data);
+</span><span class="boring">        println!(&quot;sequential {}: {}&quot;, run, elapsed);
+</span><span class="boring">        seq_mean += elapsed as f64;
+</span><span class="boring">    }
+</span><span class="boring">    seq_mean /= 10.0;
+</span><span class="boring">    println!(&quot;sequential mean: {} usec&quot;, seq_mean);
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;speedup: {}&quot;, seq_mean/par_mean);
+</span><span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="benchmarking-and-tuning"><a class="header" href="#benchmarking-and-tuning">Benchmarking and Tuning</a></h1>
+<p>Let's see what awesome speedup we get!</p>
+<p>First, setup a test harness</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">extern crate rand;
+</span><span class="boring">
+</span><span class="boring">use std::env;
+</span><span class="boring">use rand::Rng;
+</span><span class="boring">use std::time::Instant;
+</span><span class="boring">use std::convert::TryInto;
+</span><span class="boring">
+</span><span class="boring">const MILLION: usize = 1024*1024;
+</span><span class="boring">
+</span><span class="boring">fn quicksort&lt;T: PartialOrd&gt;(v: &amp;mut [T]) {
+</span><span class="boring">    if v.len() &lt;= 1 {
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    let mid = partition(v);
+</span><span class="boring">    let (lo, hi) = v.split_at_mut(mid);
+</span><span class="boring">    quicksort(lo);
+</span><span class="boring">    quicksort(hi);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) {
+</span><span class="boring">    if v.len() &lt;= 1 {
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    if v.len() &lt;= 2048 {
+</span><span class="boring">        quicksort(v);
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    crossbeam::scope(|scope| {
+</span><span class="boring">        let mid = partition(v);
+</span><span class="boring">        let (lo, hi) = v.split_at_mut(mid);
+</span><span class="boring">        scope.spawn(move |_| parallel_quicksort(lo));
+</span><span class="boring">        scope.spawn(move |_| parallel_quicksort(hi));
+</span><span class="boring">    }).expect(&quot;thread spawn failed&quot;);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn partition&lt;T: PartialOrd&gt;(v: &amp;mut [T]) -&gt; usize {
+</span><span class="boring">    let hi = v.len() - 1;
+</span><span class="boring">    let lo = 0;
+</span><span class="boring">    let pivot = hi;
+</span><span class="boring">
+</span><span class="boring">    let mut i = 0;
+</span><span class="boring">    for j in lo..hi {
+</span><span class="boring">        if v[j] &lt;= v[pivot] {
+</span><span class="boring">            v.swap(i, j);
+</span><span class="boring">            i += 1;
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">    v.swap(i, pivot);
+</span><span class="boring">    i
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn initialize_data(len: usize) -&gt; Vec&lt;u32&gt; {
+</span><span class="boring">    let mut data = Vec::with_capacity(len);
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">
+</span><span class="boring">    data.resize(len, 0);
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        data[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">    data
+</span><span class="boring">}
+</span><span class="boring">
+</span>fn reinitialize_data(v: &amp;mut [u32]) {
+    let mut rng = rand::thread_rng();
+    let len = v.len();
+    for i in 0..len {
+        v[i] = rng.gen_range(0..len).try_into().unwrap();
+    }
+}
+
+fn bench&lt;F: FnOnce(&amp;mut [u32])&gt;(sort: F, data: &amp;mut [u32]) -&gt; u64 {
+    reinitialize_data(data);
+
+    let start = Instant::now();
+    sort(data);
+    let elapsed = Instant::now() - start;
+
+    if !data.windows(2).all(|w| w[0] &lt;= w[1]) {
+        println!(&quot;sort failed!&quot;);
+    }
+
+    u64::from(elapsed.subsec_micros()) + elapsed.as_secs()*1000000u64
+}
+
+fn main() {
+    let args: Vec&lt;String&gt; = env::args().collect();
+
+    // First argument is the vector length
+    let len = match args.get(1) {
+        Some(slen) =&gt; match slen.parse::&lt;usize&gt;() {
+            Ok(num) =&gt; num,
+            Err(e) =&gt; {
+                println!(&quot;ignoring bad length: {}&quot;, e);
+                MILLION as usize
+            }
+        },
+        None =&gt; MILLION as usize,
+    };
+
+    let mut data = initialize_data(len);
+
+    let mut par_mean: f64 = 0.0;
+    for run in 0..10 {
+        let elapsed = bench(parallel_quicksort, &amp;mut data);
+        println!(&quot;parallel {}: {} usec&quot;, run, elapsed);
+        par_mean += elapsed as f64;
+    }
+    par_mean /= 10.0;
+    println!(&quot;parallel mean: {} usec&quot;, par_mean);
+
+    let mut seq_mean: f64 = 0.0;
+    for run in 0..10 {
+        let elapsed = bench(quicksort, &amp;mut data);
+        println!(&quot;sequential {}: {}&quot;, run, elapsed);
+        seq_mean += elapsed as f64;
+    }
+    seq_mean /= 10.0;
+    println!(&quot;sequential mean: {} usec&quot;, seq_mean);
+
+    println!(&quot;speedup: {}&quot;, seq_mean/par_mean);
+}</code></pre></pre>
+<p>Add some instrumentation</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::env;
+</span><span class="boring">use rand::Rng;
+</span><span class="boring">use std::time::Instant;
+</span><span class="boring">use std::sync::atomic::{AtomicU32, Ordering};
+</span><span class="boring">
+</span>const MILLION: u32 = 1024*1024;
+
+static THREAD_COUNT: AtomicU32 = AtomicU32::new(0);
+static PAR_SEQ_THRESHOLD: AtomicU32 = AtomicU32::new(2048);
+
+fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) {
+    if v.len() &lt;= 1 {
+        return;
+    }
+
+    if v.len() &lt;= PAR_SEQ_THRESHOLD.load(Ordering::SeqCst) as usize {
+        quicksort(v);
+        return;
+    }
+
+    THREAD_COUNT.fetch_add(2, Ordering::SeqCst);
+    
+    crossbeam::scope(|scope| {
+        let mid = partition(v);
+        let (lo, hi) = v.split_at_mut(mid);
+        scope.spawn(move |_| parallel_quicksort(lo));
+        scope.spawn(move |_| parallel_quicksort(hi));
+    }).expect(&quot;thread spawn failed&quot;);
+}
+<span class="boring">
+</span><span class="boring">fn quicksort&lt;T: PartialOrd&gt;(v: &amp;mut [T]) {
+</span><span class="boring">    if v.len() &lt;= 1 {
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    let mid = partition(v);
+</span><span class="boring">    let (lo, hi) = v.split_at_mut(mid);
+</span><span class="boring">    quicksort(lo);
+</span><span class="boring">    quicksort(hi);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn partition&lt;T: PartialOrd&gt;(v: &amp;mut [T]) -&gt; usize {
+</span><span class="boring">    let hi = v.len() - 1;
+</span><span class="boring">    let lo = 0;
+</span><span class="boring">    let pivot = hi;
+</span><span class="boring">
+</span><span class="boring">    let mut i = 0;
+</span><span class="boring">    for j in lo..hi {
+</span><span class="boring">        if v[j] &lt;= v[pivot] {
+</span><span class="boring">            v.swap(i, j);
+</span><span class="boring">            i += 1;
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">    v.swap(i, pivot);
+</span><span class="boring">    i
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn initialize_data(len: usize) -&gt; Vec&lt;u32&gt; {
+</span><span class="boring">    let mut data = Vec::with_capacity(len);
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">
+</span><span class="boring">    data.resize(len, 0);
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        data[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">    data
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn reinitialize_data(v: &amp;mut [u32]) {
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">    let len = v.len();
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        v[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn bench&lt;F: FnOnce(&amp;mut [u32])&gt;(sort: F, data: &amp;mut [u32]) -&gt; u64 {
+</span><span class="boring">    reinitialize_data(data);
+</span><span class="boring">
+</span><span class="boring">    let start = Instant::now();
+</span><span class="boring">    sort(data);
+</span><span class="boring">    let elapsed = Instant::now() - start;
+</span><span class="boring">
+</span><span class="boring">    if !data.windows(2).all(|w| w[0] &lt;= w[1]) {
+</span><span class="boring">        println!(&quot;sort failed!&quot;);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    u64::from(elapsed.subsec_micros()) + elapsed.as_secs()*1000000u64
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let args: Vec&lt;String&gt; = env::args().collect();
+</span><span class="boring">
+</span><span class="boring">    // First argument is the vector length
+</span><span class="boring">    let len = match args.get(1) {
+</span><span class="boring">        Some(slen) =&gt; match slen.parse::&lt;usize&gt;() {
+</span><span class="boring">            Ok(num) =&gt; num,
+</span><span class="boring">            Err(e) =&gt; {
+</span><span class="boring">                println!(&quot;ignoring bad length: {}&quot;, e);
+</span><span class="boring">                MILLION as usize
+</span><span class="boring">            }
+</span><span class="boring">        },
+</span><span class="boring">        None =&gt; MILLION as usize,
+</span><span class="boring">    };
+</span><span class="boring">
+</span><span class="boring">    // Second argument is the parallel/sequential threshold
+</span><span class="boring">    match args.get(2) {
+</span><span class="boring">        Some(val) =&gt; match val.parse::&lt;u32&gt;() {
+</span><span class="boring">            Ok(t) =&gt; {
+</span><span class="boring">                PAR_SEQ_THRESHOLD.store(t, Ordering::SeqCst);
+</span><span class="boring">            },
+</span><span class="boring">            Err(e) =&gt; println!(&quot;ignoring bad value: {}&quot;, e),
+</span><span class="boring">        },
+</span><span class="boring">        None =&gt; (),
+</span><span class="boring">    };
+</span><span class="boring">    println!(&quot;Using len {}, par/seq threshold {}&quot;, len, PAR_SEQ_THRESHOLD.load(Ordering::SeqCst));
+</span><span class="boring">        
+</span><span class="boring">    let mut data = initialize_data(len);
+</span><span class="boring">
+</span><span class="boring">    let mut par_mean: f64 = 0.0;
+</span><span class="boring">    for run in 0..10 {
+</span><span class="boring">        let elapsed = bench(parallel_quicksort, &amp;mut data);
+</span><span class="boring">        let tcount = THREAD_COUNT.swap(0, Ordering::SeqCst);
+</span><span class="boring">        println!(&quot;parallel {}: {} usec, {} threads&quot;, run, elapsed, tcount);
+</span><span class="boring">        par_mean += elapsed as f64;
+</span><span class="boring">    }
+</span><span class="boring">    par_mean /= 10.0;
+</span><span class="boring">    println!(&quot;parallel mean: {} usec&quot;, par_mean);
+</span><span class="boring">
+</span><span class="boring">    let mut seq_mean: f64 = 0.0;
+</span><span class="boring">    for run in 0..10 {
+</span><span class="boring">        let elapsed = bench(quicksort, &amp;mut data);
+</span><span class="boring">        println!(&quot;sequential {}: {}&quot;, run, elapsed);
+</span><span class="boring">        seq_mean += elapsed as f64;
+</span><span class="boring">    }
+</span><span class="boring">    seq_mean /= 10.0;
+</span><span class="boring">    println!(&quot;sequential mean: {} usec&quot;, seq_mean);
+</span><span class="boring">    
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;speedup: {}&quot;, seq_mean/par_mean);
+</span><span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="thread-pools"><a class="header" href="#thread-pools">Thread Pools</a></h1>
+<p>The idea is to amortize the cost of thread creation by doing it once at the
+beginning and then reusing the body for different tasks:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">use std::thread;
+</span><span class="boring">use std::sync::mpsc;
+</span><span class="boring">
+</span><span class="boring">pub struct ThreadPool {
+</span><span class="boring">    threads: Vec&lt;Worker&gt;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl ThreadPool {
+</span><span class="boring">    pub fn new(n: usize) -&gt; ThreadPool {
+</span><span class="boring">        let mut workers = Vec::with_capacity(n);
+</span><span class="boring">
+</span><span class="boring">        for i in 0..n {
+</span><span class="boring">            workers.push(Worker::new(i));
+</span><span class="boring">        }
+</span><span class="boring">
+</span><span class="boring">        ThreadPool { threads: workers }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    pub fn execute&lt;F&gt;(&amp;mut self, f: F) -&gt; Worker
+</span><span class="boring">    where F: FnOnce() + Send + 'static {
+</span><span class="boring">        let job = Box::new(f);
+</span><span class="boring">        let w = self.threads.pop().expect(&quot;No more threads!&quot;);
+</span><span class="boring">        println!(&quot;execute sending work to {}&quot;, w.id);
+</span><span class="boring">        w.sender.send(Task::Work(job)).unwrap();
+</span><span class="boring">        w
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    pub fn wait(&amp;mut self, w: Worker) {
+</span><span class="boring">        if let Ok(rc) = w.receiver.recv() {
+</span><span class="boring">            if !rc {
+</span><span class="boring">                println!(&quot;worker failed?!&quot;);
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">        println!(&quot;worker {} is finished&quot;, w.id);
+</span><span class="boring">        self.threads.push(w);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    pub fn drain(&amp;mut self) {
+</span><span class="boring">        while let Some(w) = self.threads.pop() {
+</span><span class="boring">            w.sender.send(Task::Quit).unwrap();
+</span><span class="boring">            w.thread.join().unwrap();
+</span><span class="boring">        }
+</span><span class="boring">    }    
+</span><span class="boring">}
+</span><span class="boring">
+</span>type Job = Box&lt;dyn FnOnce() + Send&gt;;
+
+enum Task {
+    Quit,
+    Work(Job),
+}
+
+pub struct Worker {
+    id: usize,
+    sender: mpsc::Sender&lt;Task&gt;,
+    receiver: mpsc::Receiver&lt;bool&gt;,
+    thread: thread::JoinHandle&lt;()&gt;,
+}
+
+impl Worker {
+    fn new(id: usize) -&gt; Worker {
+        let (thread_sender, thread_receiver) = mpsc::channel(); 
+        let (mgr_sender, mgr_receiver) = mpsc::channel(); 
+        let thread = thread::spawn(move || {
+            loop {
+                let work: Task = thread_receiver.recv().unwrap();
+                match work {
+                    Task::Quit =&gt; {
+                        break;
+                    },
+                    Task::Work(job) =&gt; {
+                        job();
+                    },
+                }
+                mgr_sender.send(true).expect(&quot;failed manager send&quot;);
+            }
+        });
+
+        Worker { id, sender: thread_sender, receiver: mgr_receiver, thread }
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>The actual pool is just a collection of workers:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">use std::thread;
+</span><span class="boring">use std::sync::mpsc;
+</span><span class="boring">
+</span>pub struct ThreadPool {
+    threads: Vec&lt;Worker&gt;
+}
+
+impl ThreadPool {
+    pub fn new(n: usize) -&gt; ThreadPool {
+        let mut workers = Vec::with_capacity(n);
+
+        for i in 0..n {
+            workers.push(Worker::new(i));
+        }
+
+        ThreadPool { threads: workers }
+    }
+
+    pub fn execute&lt;F&gt;(&amp;mut self, f: F) -&gt; Worker
+    where F: FnOnce() + Send + 'static {
+        let job = Box::new(f);
+        let w = self.threads.pop().expect(&quot;No more threads!&quot;);
+        println!(&quot;execute sending work to {}&quot;, w.id);
+        w.sender.send(Task::Work(job)).unwrap();
+        w
+    }
+
+    pub fn wait(&amp;mut self, w: Worker) {
+        if let Ok(rc) = w.receiver.recv() {
+            if !rc {
+                println!(&quot;worker failed?!&quot;);
+            }
+        }
+        println!(&quot;worker {} is finished&quot;, w.id);
+        self.threads.push(w);
+    }
+
+    pub fn drain(&amp;mut self) {
+        while let Some(w) = self.threads.pop() {
+            w.sender.send(Task::Quit).unwrap();
+            w.thread.join().unwrap();
+        }
+    }    
+}
+<span class="boring">
+</span><span class="boring">type Job = Box&lt;dyn FnOnce() + Send&gt;;
+</span><span class="boring">
+</span><span class="boring">enum Task {
+</span><span class="boring">    Quit,
+</span><span class="boring">    Work(Job),
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">pub struct Worker {
+</span><span class="boring">    id: usize,
+</span><span class="boring">    sender: mpsc::Sender&lt;Task&gt;,
+</span><span class="boring">    receiver: mpsc::Receiver&lt;bool&gt;,
+</span><span class="boring">    thread: thread::JoinHandle&lt;()&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Worker {
+</span><span class="boring">    fn new(id: usize) -&gt; Worker {
+</span><span class="boring">        let (thread_sender, thread_receiver) = mpsc::channel(); 
+</span><span class="boring">        let (mgr_sender, mgr_receiver) = mpsc::channel(); 
+</span><span class="boring">        let thread = thread::spawn(move || {
+</span><span class="boring">            loop {
+</span><span class="boring">                let work: Task = thread_receiver.recv().unwrap();
+</span><span class="boring">                match work {
+</span><span class="boring">                    Task::Quit =&gt; {
+</span><span class="boring">                        break;
+</span><span class="boring">                    },
+</span><span class="boring">                    Task::Work(job) =&gt; {
+</span><span class="boring">                        job();
+</span><span class="boring">                    },
+</span><span class="boring">                }
+</span><span class="boring">                mgr_sender.send(true).expect(&quot;failed manager send&quot;);
+</span><span class="boring">            }
+</span><span class="boring">        });
+</span><span class="boring">
+</span><span class="boring">        Worker { id, sender: thread_sender, receiver: mgr_receiver, thread }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">}</span></code></pre></pre>
+<p>The pool is used in the main program:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::env;
+</span><span class="boring">use rand::Rng;
+</span><span class="boring">use std::sync::atomic::{AtomicU32, Ordering};
+</span><span class="boring">use std::sync::Mutex;
+</span><span class="boring">
+</span><span class="boring">mod tpool;
+</span><span class="boring">
+</span><span class="boring">const MILLION: u32 = 256; 
+</span><span class="boring">static PAR_SEQ_THRESHOLD: AtomicU32 = AtomicU32::new(32);
+</span><span class="boring">
+</span>use tpool::ThreadPool;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref THREAD_POOL: Mutex&lt;ThreadPool&gt; = Mutex::new(ThreadPool::new(8));
+}
+
+fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send + std::marker::Sync&gt;(v: &amp;mut [T]) {
+    if v.len() &lt;= 1 {
+        return;
+    }
+
+    if v.len() &lt;= PAR_SEQ_THRESHOLD.load(Ordering::SeqCst) as usize {
+        quicksort(v);
+        return;
+    }
+
+    let mid = partition(v);
+    // let (lo, hi) = v.split_at_mut(mid);
+    let len = v.len();
+
+    let w1 = THREAD_POOL.lock().unwrap().execute(move || { println!(&quot;exec: mid {}&quot;, mid); } );
+    let w2 = THREAD_POOL.lock().unwrap().execute(move || { println!(&quot;exec: len {}&quot;, len); });
+    THREAD_POOL.lock().unwrap().wait(w1);
+    THREAD_POOL.lock().unwrap().wait(w2);
+}
+<span class="boring">
+</span><span class="boring">fn quicksort&lt;T: PartialOrd&gt;(v: &amp;mut [T]) {
+</span><span class="boring">    if v.len() &lt;= 1 {
+</span><span class="boring">        return;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    let mid = partition(v);
+</span><span class="boring">    let (lo, hi) = v.split_at_mut(mid);
+</span><span class="boring">    quicksort(lo);
+</span><span class="boring">    quicksort(hi);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn partition&lt;T: PartialOrd&gt;(v: &amp;mut [T]) -&gt; usize {
+</span><span class="boring">    let hi = v.len() - 1;
+</span><span class="boring">    let lo = 0;
+</span><span class="boring">    let pivot = hi;
+</span><span class="boring">
+</span><span class="boring">    let mut i = 0;
+</span><span class="boring">    for j in lo..hi {
+</span><span class="boring">        if v[j] &lt;= v[pivot] {
+</span><span class="boring">            v.swap(i, j);
+</span><span class="boring">            i += 1;
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">    v.swap(i, pivot);
+</span><span class="boring">    i
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn initialize_data(len: usize) -&gt; Vec&lt;u32&gt; {
+</span><span class="boring">    let mut data = Vec::with_capacity(len);
+</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">
+</span><span class="boring">    data.resize(len, 0);
+</span><span class="boring">    for i in 0..len {
+</span><span class="boring">        data[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">    }
+</span><span class="boring">    data
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let args: Vec&lt;String&gt; = env::args().collect();
+</span><span class="boring">
+</span><span class="boring">    // First argument is the vector length
+</span><span class="boring">    let len = match args.get(1) {
+</span><span class="boring">        Some(slen) =&gt; match slen.parse::&lt;usize&gt;() {
+</span><span class="boring">            Ok(num) =&gt; num,
+</span><span class="boring">            Err(e) =&gt; {
+</span><span class="boring">                println!(&quot;ignoring bad length: {}&quot;, e);
+</span><span class="boring">                MILLION as usize
+</span><span class="boring">            }
+</span><span class="boring">        },
+</span><span class="boring">        None =&gt; MILLION as usize,
+</span><span class="boring">    };
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;len {}&quot;, len);
+</span><span class="boring">    let mut v = initialize_data(len);
+</span><span class="boring">    parallel_quicksort(&amp;mut v);
+</span><span class="boring">
+</span><span class="boring">    THREAD_POOL.lock().unwrap().drain();
+</span><span class="boring">}</span></code></pre></pre>
 
                     </main>
 

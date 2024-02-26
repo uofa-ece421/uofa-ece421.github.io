@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Channels - Concurrency in Rust</title>
+        <title>Parallelism - Concurrency in Rust</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="closures.html"><strong aria-hidden="true">1.</strong> Closures</a></li><li class="chapter-item expanded "><a href="cvp.html"><strong aria-hidden="true">2.</strong> Concurrency vs Parallelism</a></li><li class="chapter-item expanded "><a href="threads.html"><strong aria-hidden="true">3.</strong> Introduction to Threads</a></li><li class="chapter-item expanded "><a href="channels.html" class="active"><strong aria-hidden="true">4.</strong> Channels</a></li><li class="chapter-item expanded "><a href="request-response.html"><strong aria-hidden="true">5.</strong> Request/Response</a></li><li class="chapter-item expanded "><a href="parallel.html"><strong aria-hidden="true">6.</strong> Parallelism</a></li><li class="chapter-item expanded "><a href="locks.html"><strong aria-hidden="true">7.</strong> Locks</a></li><li class="chapter-item expanded "><a href="quicksort.html"><strong aria-hidden="true">8.</strong> Parallelizing Quicksort</a></li><li class="chapter-item expanded "><a href="bench.html"><strong aria-hidden="true">9.</strong> Benchmarking and Tuning</a></li><li class="chapter-item expanded "><a href="pools.html"><strong aria-hidden="true">10.</strong> Thread Pools</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="closures.html"><strong aria-hidden="true">1.</strong> Closures</a></li><li class="chapter-item expanded "><a href="cvp.html"><strong aria-hidden="true">2.</strong> Concurrency vs Parallelism</a></li><li class="chapter-item expanded "><a href="threads.html"><strong aria-hidden="true">3.</strong> Introduction to Threads</a></li><li class="chapter-item expanded "><a href="channels.html"><strong aria-hidden="true">4.</strong> Channels</a></li><li class="chapter-item expanded "><a href="request-response.html"><strong aria-hidden="true">5.</strong> Request/Response</a></li><li class="chapter-item expanded "><a href="parallel.html" class="active"><strong aria-hidden="true">6.</strong> Parallelism</a></li><li class="chapter-item expanded "><a href="locks.html"><strong aria-hidden="true">7.</strong> Locks</a></li><li class="chapter-item expanded "><a href="quicksort.html"><strong aria-hidden="true">8.</strong> Parallelizing Quicksort</a></li><li class="chapter-item expanded "><a href="bench.html"><strong aria-hidden="true">9.</strong> Benchmarking and Tuning</a></li><li class="chapter-item expanded "><a href="pools.html"><strong aria-hidden="true">10.</strong> Thread Pools</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,66 +173,62 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="channels"><a class="header" href="#channels">Channels</a></h1>
-<p><em>Channels</em> are used for <em>message passing</em> between threads.
-From the Go language documentation:</p>
+                        <h1 id="parallel-programming"><a class="header" href="#parallel-programming">Parallel Programming</a></h1>
+<p>Parallel algorithms typically share data structures among multiple threads,
+with the goal of solving a single problem in less time.</p>
+<p>Data parallel algorithms can sometimes be classified <em>SIMD</em> (Single Instruction
+Multiple Data) because each thread performs the same algorithm on a different
+portion of the data.</p>
+<p>Generally speaking, parallelism is hard, or to be more specific, achieving
+<var>Speedup &gt; 1</var> is hard.</p>
 <blockquote>
-<p>Do not communicate by sharing memory; instead, share memory by communicating.</p>
+<p><var>Speedup<sub>N</sub> = T(sequential)/T(parallel<sub>N</sub>)</var></p>
 </blockquote>
-<p>Back in the day, there was much ado about the <em>duality</em> of message passing vs
-shared memory. The Linda language tried to implement a distributed shared memory
-abstraction using message passing.</p>
-<p>Today, most message passing APIs are implemented using shared memory. The main
-reason: <em>copying memory is expensive</em>. It is <em>very</em> difficult for the advantages
-of thread code and data locality to overcome the costs of the copy.</p>
-<p>Message passing is usually used in concurrent (vs parallel) systems, and of
-course heavily used in distributed systems.</p>
-<p>A Rust <a href="https://doc.rust-lang.org/std/sync/mpsc/fn.channel.html"><code>mpsc::channel</code></a> is almost exactly like a Unix domain socket or pipe.</p>
-<pre><pre class="playground"><code class="language-rust">use std::sync::mpsc;
-use std::thread;
-use std::time::{Duration, Instant};
-
-fn main() {
-    let (tx, rx) = mpsc::channel();
-
-    let tx1 = tx.clone();  // so we can have two senders
-    thread::spawn(move || {
-        let start = Instant::now();
-        for _ in 1..5 {
-            let msg = format!(&quot; &lt;t1: elapsed {:?}&gt; &quot;, start.elapsed());
-            tx1.send(msg).unwrap();
-            thread::sleep(Duration::from_secs(1));
-        }
-    });
-
-    thread::spawn(move || {
-        let vals = vec![
-            String::from(&quot; #t2# &quot;),
-            String::from(&quot; #t2 again# &quot;),
-            String::from(&quot; #t2 more# &quot;),
-            String::from(&quot; #t2 last# &quot;),
-        ];
-
-        for val in vals {
-            tx.send(val).unwrap();
-            thread::sleep(Duration::from_secs(1));
-        }
-    });
-
-    for received in rx {
-        println!(&quot;{}&quot;, received);
-    }
-}</code></pre></pre>
+<p>Note that <var>T(sequential)</var> is typically <em>not</em> <var>T(parallel<sub>1</sub></var></p>
+<p><strong>Amdahl's Law</strong> (Speedup):</p>
+<blockquote>
+<p><var>S<sub>latency</sub>(s) = [(1 - p) + p/s]<sup>-1</sup></var></p>
+</blockquote>
+<p>where</p>
+<ul>
+<li><var>S<sub>latency</sub></var> is the theoretical speedup of the execution of the whole task</li>
+<li><var>s</var> is the speedup of the part that can be parallelized</li>
+<li><var>p</var> is the proportion that can be parallelized</li>
+</ul>
+<p>For example, if 90% of a sequential program can be parallelized,
+the best speedup you can get is <var>S</var> = 1/0.1 = 10 even if you managed to
+get the parallel execution time to zero!</p>
+<p><strong>Gustafson's Law</strong> (Scaleup):</p>
+<blockquote>
+<p><var>S = 1 + (N - 1)*p</var></p>
+</blockquote>
+<p>where</p>
+<ul>
+<li><var>N</var> is the number of processors used</li>
+</ul>
+<p>Gustafson's Law addresses the fact that most people increase the problem size
+as they increase the number of processors.</p>
+<p>For example, if you used 100 processors on a program that is 90% parallelizable,
+Gustafson's Law predicts a scaleup <var>S</var> = 1 + (100 - 1)*0.9 = 90.1</p>
+<p><strong>Inherent Costs of Parallelization</strong></p>
+<p>In addition to the sequential part that can't be parallelized, you have to
+minimize or amortize the expense of creating and coordinating threads:</p>
+<ul>
+<li>thread creation (<code>spawn</code>)</li>
+<li>thread communication, e.g. fork/join (barriers), events</li>
+<li>data integrity (locks)</li>
+<li>cache coherence and locality</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="threads.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="request-response.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="request-response.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="locks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -242,11 +238,11 @@ fn main() {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="threads.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="request-response.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="request-response.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="locks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
