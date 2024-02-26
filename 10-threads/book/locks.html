@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Channels - Concurrency in Rust</title>
+        <title>Locks - Concurrency in Rust</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="closures.html"><strong aria-hidden="true">1.</strong> Closures</a></li><li class="chapter-item expanded "><a href="cvp.html"><strong aria-hidden="true">2.</strong> Concurrency vs Parallelism</a></li><li class="chapter-item expanded "><a href="threads.html"><strong aria-hidden="true">3.</strong> Introduction to Threads</a></li><li class="chapter-item expanded "><a href="channels.html" class="active"><strong aria-hidden="true">4.</strong> Channels</a></li><li class="chapter-item expanded "><a href="request-response.html"><strong aria-hidden="true">5.</strong> Request/Response</a></li><li class="chapter-item expanded "><a href="parallel.html"><strong aria-hidden="true">6.</strong> Parallelism</a></li><li class="chapter-item expanded "><a href="locks.html"><strong aria-hidden="true">7.</strong> Locks</a></li><li class="chapter-item expanded "><a href="quicksort.html"><strong aria-hidden="true">8.</strong> Parallelizing Quicksort</a></li><li class="chapter-item expanded "><a href="bench.html"><strong aria-hidden="true">9.</strong> Benchmarking and Tuning</a></li><li class="chapter-item expanded "><a href="pools.html"><strong aria-hidden="true">10.</strong> Thread Pools</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="closures.html"><strong aria-hidden="true">1.</strong> Closures</a></li><li class="chapter-item expanded "><a href="cvp.html"><strong aria-hidden="true">2.</strong> Concurrency vs Parallelism</a></li><li class="chapter-item expanded "><a href="threads.html"><strong aria-hidden="true">3.</strong> Introduction to Threads</a></li><li class="chapter-item expanded "><a href="channels.html"><strong aria-hidden="true">4.</strong> Channels</a></li><li class="chapter-item expanded "><a href="request-response.html"><strong aria-hidden="true">5.</strong> Request/Response</a></li><li class="chapter-item expanded "><a href="parallel.html"><strong aria-hidden="true">6.</strong> Parallelism</a></li><li class="chapter-item expanded "><a href="locks.html" class="active"><strong aria-hidden="true">7.</strong> Locks</a></li><li class="chapter-item expanded "><a href="quicksort.html"><strong aria-hidden="true">8.</strong> Parallelizing Quicksort</a></li><li class="chapter-item expanded "><a href="bench.html"><strong aria-hidden="true">9.</strong> Benchmarking and Tuning</a></li><li class="chapter-item expanded "><a href="pools.html"><strong aria-hidden="true">10.</strong> Thread Pools</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,66 +173,86 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="channels"><a class="header" href="#channels">Channels</a></h1>
-<p><em>Channels</em> are used for <em>message passing</em> between threads.
-From the Go language documentation:</p>
-<blockquote>
-<p>Do not communicate by sharing memory; instead, share memory by communicating.</p>
-</blockquote>
-<p>Back in the day, there was much ado about the <em>duality</em> of message passing vs
-shared memory. The Linda language tried to implement a distributed shared memory
-abstraction using message passing.</p>
-<p>Today, most message passing APIs are implemented using shared memory. The main
-reason: <em>copying memory is expensive</em>. It is <em>very</em> difficult for the advantages
-of thread code and data locality to overcome the costs of the copy.</p>
-<p>Message passing is usually used in concurrent (vs parallel) systems, and of
-course heavily used in distributed systems.</p>
-<p>A Rust <a href="https://doc.rust-lang.org/std/sync/mpsc/fn.channel.html"><code>mpsc::channel</code></a> is almost exactly like a Unix domain socket or pipe.</p>
-<pre><pre class="playground"><code class="language-rust">use std::sync::mpsc;
+                        <h1 id="using-locks"><a class="header" href="#using-locks">Using Locks</a></h1>
+<p>A <code>Mutex&lt;T&gt;</code> is a wraps a smart pointer called a <code>MutexGuard</code>, which implements
+the <code>Deref</code> and <code>Drop</code> traits. Rust supports for data integrity:</p>
+<ul>
+<li>must call <code>lock</code> before accessing the data protected by the mutex</li>
+<li>lock is automatically released when owner exits scope</li>
+</ul>
+<p>Rust is conservative about which data needs to be locked (e.g. globals).
+Note that locks, threads, etc are provided by the runtime - they are not
+intrinsically part of the language itself. Although Rust's ownership rules
+go a long way, Rust cannot detect deadlock or fix your performance problems!</p>
+<pre><pre class="playground"><code class="language-rust">use std::sync::Mutex;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 fn main() {
-    let (tx, rx) = mpsc::channel();
-
-    let tx1 = tx.clone();  // so we can have two senders
-    thread::spawn(move || {
-        let start = Instant::now();
-        for _ in 1..5 {
-            let msg = format!(&quot; &lt;t1: elapsed {:?}&gt; &quot;, start.elapsed());
-            tx1.send(msg).unwrap();
-            thread::sleep(Duration::from_secs(1));
+    let counter = Mutex::new(0);
+    let handle = thread::spawn(move || {
+        for i in 1..10 {
+            {
+                let mut val = counter.lock().unwrap();
+                *val = i;
+            }
+            println!(&quot;number {:?} from the spawned thread!&quot;, counter);
+            thread::sleep(Duration::from_millis(1));
         }
     });
 
-    thread::spawn(move || {
-        let vals = vec![
-            String::from(&quot; #t2# &quot;),
-            String::from(&quot; #t2 again# &quot;),
-            String::from(&quot; #t2 more# &quot;),
-            String::from(&quot; #t2 last# &quot;),
-        ];
-
-        for val in vals {
-            tx.send(val).unwrap();
-            thread::sleep(Duration::from_secs(1));
-        }
-    });
-
-    for received in rx {
-        println!(&quot;{}&quot;, received);
-    }
+    handle.join().unwrap();
+    //println!(&quot;final number {:?} from main&quot;, counter);
 }</code></pre></pre>
+<pre><pre class="playground"><code class="language-rust">use std::rc::Rc;
+use std::sync::Mutex;
+use std::thread;
+
+fn main() {
+    let counter = Rc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        let counter = Rc::clone(&amp;counter);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+
+            *num += 1;
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!(&quot;Result: {}&quot;, *counter.lock().unwrap());
+}</code></pre></pre>
+<h3 id="send-and-sync"><a class="header" href="#send-and-sync"><code>Send</code> and <code>Sync</code></a></h3>
+<p><em>Send</em> is a marker trait that indicates that <em>ownership</em> of the value can be
+<code>move</code>d between threads.</p>
+<ul>
+<li>Almost every Rust type is <code>Send</code>, except for types explicity documented as not being thread-safe, e.g. <code>Rc&lt;T&gt;</code> and <code>RefCell&lt;T&gt;</code></li>
+<li>Any compound type composed entirely of <code>Send</code> types is also <code>Send</code>.</li>
+<li>A type <em>not</em> marked <code>Send</code> (e.g. raw pointers) can be passed between threads by writing an <code>unsafe</code> trait. In this case, the implementor is taking responsibility for making sure the transfer occurrs correctly.</li>
+</ul>
+<p><em>Sync</em> is a marker trait that indicates that the value can be referenced from
+multiple threads.</p>
+<ul>
+<li>A type <code>T</code> is <code>Sync</code> if <code>&amp;T</code> is <code>Send</code>.</li>
+<li>Any compound type composed entirely of <code>Sync</code> types is also <code>Sync</code>.</li>
+<li>You can also implement <code>unsafe</code> traits for types not marked <code>Sync</code>.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="threads.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="parallel.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="request-response.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="quicksort.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -242,11 +262,11 @@ fn main() {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="threads.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="parallel.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="request-response.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="quicksort.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
