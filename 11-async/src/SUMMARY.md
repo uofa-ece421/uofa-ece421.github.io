@@ -5,3 +5,6 @@
 - [Futures](./futures.md)
 - [std::future::Future](./stdfuture.md)
 - [Runtimes](./runtimes.md)
+- [Pinning](./pinning.md)
+- [Streams](./streams.md)
+
