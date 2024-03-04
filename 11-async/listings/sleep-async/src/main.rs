@@ -1,7 +1,6 @@
 extern crate async_std;
 
 use async_std::task::{sleep, spawn};
-
 use std::time::Duration;
 
 async fn sleeping() {

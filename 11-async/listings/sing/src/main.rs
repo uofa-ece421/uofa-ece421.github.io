@@ -1,13 +1,17 @@
-extern crate futures;
+extern crate async_std;
 
-use futures::executor::block_on;
+use async_std::task::{block_on, sleep};
 
-// ANCHOR: async
+use std::time::Duration;
+
+// ANCHOR: sing
 struct Song {
     lyrics: String,
 }
 
 async fn learn_song() -> Song {
+    println!("Learning...");
+    sleep(Duration::from_secs(5)).await;
     Song { lyrics: "Doe, a deer, a female deer; Ray, a drop of golden sun...".to_string() }
 }
 
@@ -16,11 +20,12 @@ async fn sing_song(song: &Song) {
 }
 
 async fn dance() {
-    println!("I have two left feet :-(");
+    for _ in 0..5 {
+        sleep(Duration::from_secs(1)).await;
+        println!("dancity-dance");
+    }
 }
-// ANCHOR_END: async
 
-// ANCHOR: await
 async fn learn_and_sing() {
     // Wait until the song has been learned before singing it.
     // We use `.await` here rather than `block_on` to prevent blocking the
@@ -29,7 +34,20 @@ async fn learn_and_sing() {
     sing_song(&song).await;
 }
 
-async fn async_main() {
+async fn blocking() {
+    println!("Learn to sing and dance!\n");
+    learn_and_sing().await;
+    dance().await;
+}
+// ANCHOR_END: sing
+
+// ANCHOR: async
+#[async_std::main]
+async fn main() {
+    block_on(blocking());
+
+    println!("\nLet's do both at once!");
+
     let f1 = learn_and_sing();
     let f2 = dance();
 
@@ -37,19 +55,8 @@ async fn async_main() {
     // If we're temporarily blocked in the `learn_and_sing` future, the `dance`
     // future will take over the current thread. If `dance` becomes blocked,
     // `learn_and_sing` can take back over. If both futures are blocked, then
-    // `async_main` is blocked and will yield to the executor.
+    // `main` is blocked and will yield to the executor.
     futures::join!(f1, f2);
 }
+// ANCHOR_END: async
 
-fn main() {
-    block_on(async_main());
-}
-// ANCHOR_END: await
-
-// ANCHOR: block
-fn blocking_main() {
-    let song = block_on(learn_song());
-    block_on(sing_song(&song));
-    block_on(dance());
-}
-// ANCHOR_END: block
