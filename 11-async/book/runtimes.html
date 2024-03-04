@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Futures - Async/Await</title>
+        <title>Runtimes - Async/Await</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html" class="active"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="runtimes.html"><strong aria-hidden="true">5.</strong> Runtimes</a></li><li class="chapter-item expanded "><a href="pinning.html"><strong aria-hidden="true">6.</strong> Pinning</a></li><li class="chapter-item expanded "><a href="streams.html"><strong aria-hidden="true">7.</strong> Streams</a></li><li class="chapter-item expanded "><a href="spawn.html"><strong aria-hidden="true">8.</strong> Spawning Tasks</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="runtimes.html" class="active"><strong aria-hidden="true">5.</strong> Runtimes</a></li><li class="chapter-item expanded "><a href="pinning.html"><strong aria-hidden="true">6.</strong> Pinning</a></li><li class="chapter-item expanded "><a href="streams.html"><strong aria-hidden="true">7.</strong> Streams</a></li><li class="chapter-item expanded "><a href="spawn.html"><strong aria-hidden="true">8.</strong> Spawning Tasks</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,81 +173,46 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="futures"><a class="header" href="#futures">Futures</a></h1>
-<p>The <code>async</code> keyword tells the compiler to transform a function into a state
-machine that implements the <code>Future</code> trait.</p>
-<pre><pre class="playground"><code class="language-rust edition2021">
-/* A simplified version of the Future trait. The Output type is the function
- * return type. For procedures like main() or back_to_the_future we use ().
- * poll() is used to determine if the Future is ready to complete. The callback
- * function wake() is used by the future to signal the runtime that it is ready.
- */
-trait Future {
-    type Output;
-    fn poll(&amp;mut self, wake: fn()) -&gt; Poll&lt;Self::Output&gt;;
-}
+                        <h1 id="runtimes"><a class="header" href="#runtimes">Runtimes</a></h1>
+<p>Rust does not have a builtin <em>runtime</em>, but all <code>async</code> programs require one.
+Both single- and multi-threaded runtimes are available:</p>
+<ul>
+<li><a href="https://crates.io/crates/tokio">tokio</a> - very popular, especially for sockets</li>
+<li><a href="https://crates.io/crates/async-std">async-std</a> - wraps the <code>std</code> library calls</li>
+<li><a href="https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/fuchsia-async/">fuchsia-async</a> - an executor for Google's Fuchsia OS.</li>
+</ul>
+<p>The runtimes will usually require that you enable some futures.</p>
+<pre><code class="language-cargo">[dependencies.async-std]
+version = &quot;1.12.0&quot;
+features = [&quot;attributes&quot;]
+</code></pre>
+<p>The runtimes can be explicitly started:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate tokio;
 
-enum Poll&lt;T&gt; {
-    Ready(T),  // When Ready, return the type T of the function
-    Pending,   // The Future is still waiting
-}
-
-struct AlwaysReady;
-
-impl Future for AlwaysReady {
-    type Output = ();
-
-    fn poll(&amp;mut self, _wake: fn()) -&gt; Poll&lt;Self::Output&gt; {
-        Poll::Ready(())
-    }
+async fn app() {
+    println!(&quot;tokio ran me&quot;);
 }
 
 fn main() {
-   back_to_the_future();
-}
-
-// async fn back_to_the_future() {...}
-fn back_to_the_future() -&gt; impl Future&lt;Output=()&gt; {
-    println!(&quot;Great Scott! 88 GigaWatts!&quot;);
-    AlwaysReady
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let future = app();
+    rt.block_on(future);
 }</code></pre></pre>
-<p>A more interesting <code>poll</code> implementation:</p>
-<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct SocketRead&lt;'a&gt; {
-    socket: &amp;'a Socket,
-}
+<p>or the runtimes can be started using decorators:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">#[tokio::main]
+async fn main() {
 
-impl Future for SocketRead&lt;'_&gt; {
-    type Output = Vec&lt;u8&gt;;
-
-    fn poll(&amp;mut self, wake: fn()) -&gt; Poll&lt;Self::Output&gt; {
-        if self.socket.has_data_to_read() {
-            // The socket has data -- read it into a buffer and return it.
-            Poll::Ready(self.socket.read_buf())
-        } else {
-            // The socket does not yet have data.
-            //
-            // Arrange for `wake` to be called once data is available.
-            // When data becomes available, `wake` will be called, and the
-            // user of this `Future` will know to call `poll` again and
-            // receive data.
-            self.socket.set_readable_callback(wake);
-            Poll::Pending
-        }
-    }
-}
-<span class="boring">}</span></code></pre></pre>
+}</code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="primer.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="stdfuture.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="stdfuture.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="pinning.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -257,11 +222,11 @@ impl Future for SocketRead&lt;'_&gt; {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="primer.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="stdfuture.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="stdfuture.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="pinning.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

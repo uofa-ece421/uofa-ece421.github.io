@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html" class="active"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="deepdive.html"><strong aria-hidden="true">5.</strong> A Deeper Dive</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html" class="active"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="runtimes.html"><strong aria-hidden="true">5.</strong> Runtimes</a></li><li class="chapter-item expanded "><a href="pinning.html"><strong aria-hidden="true">6.</strong> Pinning</a></li><li class="chapter-item expanded "><a href="streams.html"><strong aria-hidden="true">7.</strong> Streams</a></li><li class="chapter-item expanded "><a href="spawn.html"><strong aria-hidden="true">8.</strong> Spawning Tasks</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="stdfuturefuture"><a class="header" href="#stdfuturefuture">std::future::Future</a></h1>
 <p>The full <code>Future</code> is defined here <a href="https://doc.rust-lang.org/std/future/trait.Future.html">std::future::Future</a></p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>trait Future {
     type Output;
@@ -191,7 +191,7 @@
 <li><a href="https://doc.rust-lang.org/std/pin/struct.Pin.html">std::pin::Pin</a> - a wrapper around a pointer that <em>pins</em> its value in place, preventing the value from being moved unless it implements <code>Unpin</code>.</li>
 <li><a href="https://doc.rust-lang.org/std/task/struct.Context.html">std::task::Context</a> used by the run-time to save and restore state, and to provide access to a <code>&amp;Waker</code></li>
 </ul>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::{
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">use std::{
 </span><span class="boring">    future::Future,
 </span><span class="boring">    pin::Pin,
 </span><span class="boring">    sync::{Arc, Mutex},
@@ -296,7 +296,7 @@ impl SleepFuture {
 </span><span class="boring">}
 </span><span class="boring"></span></code></pre></pre>
 <p>We can test the <code>poll</code> implementation using the <code>async_std</code> runtime:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::{
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">use std::{
 </span><span class="boring">    future::Future,
 </span><span class="boring">    pin::Pin,
 </span><span class="boring">    sync::{Arc, Mutex},
@@ -409,7 +409,7 @@ async fn main() {
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="deepdive.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="runtimes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -423,7 +423,7 @@ async fn main() {
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="deepdive.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="runtimes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

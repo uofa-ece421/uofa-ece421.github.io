@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html" class="active"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="deepdive.html"><strong aria-hidden="true">5.</strong> A Deeper Dive</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html" class="active"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="runtimes.html"><strong aria-hidden="true">5.</strong> Runtimes</a></li><li class="chapter-item expanded "><a href="pinning.html"><strong aria-hidden="true">6.</strong> Pinning</a></li><li class="chapter-item expanded "><a href="streams.html"><strong aria-hidden="true">7.</strong> Streams</a></li><li class="chapter-item expanded "><a href="spawn.html"><strong aria-hidden="true">8.</strong> Spawning Tasks</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -183,7 +183,7 @@
 </ul>
 <p>Whereas a synchronous function will block the entire thread when a blocking
 call is made, an <code>async</code> function will yield to other tasks at <code>await</code> points.</p>
-<pre><pre class="playground"><code class="language-rust">extern crate futures;
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate futures;
 
 // `block_on` blocks the current thread until the provided future has run to
 // completion. Other executors provide more complex behavior, like scheduling
@@ -199,7 +199,7 @@ fn main() {
     block_on(future); // `future` is run and &quot;hello, world!&quot; is printed
 }</code></pre></pre>
 <p>Note that futures are <em>lazy</em> - they won't run/poll until you tell them to</p>
-<pre><pre class="playground"><code class="language-rust">use std::thread::{sleep};
+<pre><pre class="playground"><code class="language-rust edition2021">use std::thread::{sleep};
 use std::time::Duration;
 
 fn sleeping() {
@@ -221,8 +221,9 @@ fn main() {
 }</code></pre></pre>
 <p>Here is the same program except that <code>sleeping</code> and <code>interrupting</code> run at the
 same time instead of one at a time.</p>
-<pre><pre class="playground"><code class="language-rust">use async_std::task::{sleep, spawn};
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate async_std;
 
+use async_std::task::{sleep, spawn};
 use std::time::Duration;
 
 async fn sleeping() {

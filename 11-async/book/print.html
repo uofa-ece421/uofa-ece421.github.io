@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="deepdive.html"><strong aria-hidden="true">5.</strong> A Deeper Dive</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="runtimes.html"><strong aria-hidden="true">5.</strong> Runtimes</a></li><li class="chapter-item expanded "><a href="pinning.html"><strong aria-hidden="true">6.</strong> Pinning</a></li><li class="chapter-item expanded "><a href="streams.html"><strong aria-hidden="true">7.</strong> Streams</a></li><li class="chapter-item expanded "><a href="spawn.html"><strong aria-hidden="true">8.</strong> Spawning Tasks</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -225,7 +225,7 @@ client requests</p>
 </ul>
 <p>Whereas a synchronous function will block the entire thread when a blocking
 call is made, an <code>async</code> function will yield to other tasks at <code>await</code> points.</p>
-<pre><pre class="playground"><code class="language-rust">extern crate futures;
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate futures;
 
 // `block_on` blocks the current thread until the provided future has run to
 // completion. Other executors provide more complex behavior, like scheduling
@@ -241,7 +241,7 @@ fn main() {
     block_on(future); // `future` is run and &quot;hello, world!&quot; is printed
 }</code></pre></pre>
 <p>Note that futures are <em>lazy</em> - they won't run/poll until you tell them to</p>
-<pre><pre class="playground"><code class="language-rust">use std::thread::{sleep};
+<pre><pre class="playground"><code class="language-rust edition2021">use std::thread::{sleep};
 use std::time::Duration;
 
 fn sleeping() {
@@ -263,8 +263,9 @@ fn main() {
 }</code></pre></pre>
 <p>Here is the same program except that <code>sleeping</code> and <code>interrupting</code> run at the
 same time instead of one at a time.</p>
-<pre><pre class="playground"><code class="language-rust">use async_std::task::{sleep, spawn};
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate async_std;
 
+use async_std::task::{sleep, spawn};
 use std::time::Duration;
 
 async fn sleeping() {
@@ -293,7 +294,7 @@ blocking occurs.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="futures"><a class="header" href="#futures">Futures</a></h1>
 <p>The <code>async</code> keyword tells the compiler to transform a function into a state
 machine that implements the <code>Future</code> trait.</p>
-<pre><pre class="playground"><code class="language-rust">
+<pre><pre class="playground"><code class="language-rust edition2021">
 /* A simplified version of the Future trait. The Output type is the function
  * return type. For procedures like main() or back_to_the_future we use ().
  * poll() is used to determine if the Future is ready to complete. The callback
@@ -329,7 +330,7 @@ fn back_to_the_future() -&gt; impl Future&lt;Output=()&gt; {
     AlwaysReady
 }</code></pre></pre>
 <p>A more interesting <code>poll</code> implementation:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct SocketRead&lt;'a&gt; {
     socket: &amp;'a Socket,
@@ -357,7 +358,7 @@ impl Future for SocketRead&lt;'_&gt; {
 <span class="boring">}</span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="stdfuturefuture"><a class="header" href="#stdfuturefuture">std::future::Future</a></h1>
 <p>The full <code>Future</code> is defined here <a href="https://doc.rust-lang.org/std/future/trait.Future.html">std::future::Future</a></p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>trait Future {
     type Output;
@@ -373,7 +374,7 @@ impl Future for SocketRead&lt;'_&gt; {
 <li><a href="https://doc.rust-lang.org/std/pin/struct.Pin.html">std::pin::Pin</a> - a wrapper around a pointer that <em>pins</em> its value in place, preventing the value from being moved unless it implements <code>Unpin</code>.</li>
 <li><a href="https://doc.rust-lang.org/std/task/struct.Context.html">std::task::Context</a> used by the run-time to save and restore state, and to provide access to a <code>&amp;Waker</code></li>
 </ul>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::{
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">use std::{
 </span><span class="boring">    future::Future,
 </span><span class="boring">    pin::Pin,
 </span><span class="boring">    sync::{Arc, Mutex},
@@ -478,7 +479,7 @@ impl SleepFuture {
 </span><span class="boring">}
 </span><span class="boring"></span></code></pre></pre>
 <p>We can test the <code>poll</code> implementation using the <code>async_std</code> runtime:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">use std::{
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">use std::{
 </span><span class="boring">    future::Future,
 </span><span class="boring">    pin::Pin,
 </span><span class="boring">    sync::{Arc, Mutex},
@@ -582,13 +583,13 @@ async fn main() {
     );
 }
 <span class="boring"></span></code></pre></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="a-deeper-dive"><a class="header" href="#a-deeper-dive">A Deeper Dive</a></h1>
-<h3 id="runtimes"><a class="header" href="#runtimes">Runtimes</a></h3>
-<p>All <code>async</code> programs require a <em>runtime</em>. Both single- and multi-threaded
-runtimes are available:</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="runtimes"><a class="header" href="#runtimes">Runtimes</a></h1>
+<p>Rust does not have a builtin <em>runtime</em>, but all <code>async</code> programs require one.
+Both single- and multi-threaded runtimes are available:</p>
 <ul>
 <li><a href="https://crates.io/crates/tokio">tokio</a> - very popular, especially for sockets</li>
 <li><a href="https://crates.io/crates/async-std">async-std</a> - wraps the <code>std</code> library calls</li>
+<li><a href="https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/fuchsia-async/">fuchsia-async</a> - an executor for Google's Fuchsia OS.</li>
 </ul>
 <p>The runtimes will usually require that you enable some futures.</p>
 <pre><code class="language-cargo">[dependencies.async-std]
@@ -596,24 +597,548 @@ version = &quot;1.12.0&quot;
 features = [&quot;attributes&quot;]
 </code></pre>
 <p>The runtimes can be explicitly started:</p>
-<pre><pre class="playground"><code class="language-rust">extern crate tokio;
-
-use futures::prelude::*;
-use tokio::prelude::*;
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate tokio;
 
 async fn app() {
-    todo!()
+    println!(&quot;tokio ran me&quot;);
 }
 
 fn main() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
     let future = app();
     rt.block_on(future);
 }</code></pre></pre>
 <p>or the runtimes can be started using decorators:</p>
-<pre><pre class="playground"><code class="language-rust">#[tokio::main]
+<pre><pre class="playground"><code class="language-rust edition2021">#[tokio::main]
 async fn main() {
 
+}</code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="pinning"><a class="header" href="#pinning">Pinning</a></h1>
+<p>Unlike threads, <code>async</code> functions can accept non-<code>'static</code> references, which
+results in a <code>Future</code> that is bounded by the lifetime of the argument:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// This function:
+async fn foo(x: &amp;u8) -&gt; u8 { *x }
+
+// Is equivalent to this function:
+fn foo_expanded&lt;'a&gt;(x: &amp;'a u8) -&gt; impl Future&lt;Output = u8&gt; + 'a {
+    async move { *x }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>This means that the data must live long enough for the future to <code>.await</code> it.</p>
+<p><em>Pinning</em> is used to prevent a pointer from changing while the future awaits its completion.</p>
+<h3 id="why-pin"><a class="header" href="#why-pin">Why Pin?</a></h3>
+<p>The problem comes down to self-referential types (e.g. lists):</p>
+<pre><pre class="playground"><code class="language-rust edition2021">#[derive(Debug)]
+struct Test {
+    a: String,
+    b: *const String,
+}
+
+impl Test {
+    fn new(txt: &amp;str) -&gt; Self {
+        Test {
+            a: String::from(txt),
+            b: std::ptr::null(),
+        }
+    }
+
+    fn init(&amp;mut self) {
+        let self_ref: *const String = &amp;self.a;
+        self.b = self_ref;
+    }
+
+    fn a(&amp;self) -&gt; &amp;str {
+        &amp;self.a
+    }
+
+    fn b(&amp;self) -&gt; &amp;String {
+        assert!(!self.b.is_null(), &quot;Test::b called without Test::init being called first&quot;);
+        unsafe { &amp;*(self.b) }
+    }
+}
+<span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut test1 = Test::new(&quot;test1&quot;);
+</span><span class="boring">    test1.init();
+</span><span class="boring">    let mut test2 = Test::new(&quot;test2&quot;);
+</span><span class="boring">    test2.init();
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;before swap: &amp;test1 {:p}, size {}&quot;, &amp;test1, std::mem::size_of::&lt;Test&gt;());
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;test1: a: {} {:p}, b: {} {:p}&quot;, test1.a(), &amp;test1.a, test1.b(), test1.b);
+</span><span class="boring">    println!(&quot;test2: a: {} {:p}, b: {} {:p}&quot;, test2.a(), &amp;test2.a, test2.b(), test2.b);
+</span><span class="boring">    
+</span><span class="boring">    std::mem::swap(&amp;mut test1, &amp;mut test2);
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;after swap &amp;test2 {:p}, size {}&quot;, &amp;test2, std::mem::size_of::&lt;Test&gt;());
+</span><span class="boring">
+</span><span class="boring">    //test1.a = &quot;Surprise!&quot;.to_string();
+</span><span class="boring">    println!(&quot;test1: a: {} {:p}, b: {} {:p}&quot;, test1.a(), &amp;test1.a, test1.b(), test1.b);
+</span><span class="boring">    println!(&quot;test2: a: {} {:p}, b: {} {:p}&quot;, test2.a(), &amp;test2.a, test2.b(), test2.b);
+</span><span class="boring">}</span></code></pre></pre>
+<p>You can see that <code>self.b</code> is set to point within itself, <code>&amp;self.a</code></p>
+<p>What happens if we swap <code>test1</code> with <code>test2</code>, which moves the pointers?</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#[derive(Debug)]
+</span><span class="boring">struct Test {
+</span><span class="boring">    a: String,
+</span><span class="boring">    b: *const String,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Test {
+</span><span class="boring">    fn new(txt: &amp;str) -&gt; Self {
+</span><span class="boring">        Test {
+</span><span class="boring">            a: String::from(txt),
+</span><span class="boring">            b: std::ptr::null(),
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn init(&amp;mut self) {
+</span><span class="boring">        let self_ref: *const String = &amp;self.a;
+</span><span class="boring">        self.b = self_ref;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn a(&amp;self) -&gt; &amp;str {
+</span><span class="boring">        &amp;self.a
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn b(&amp;self) -&gt; &amp;String {
+</span><span class="boring">        assert!(!self.b.is_null(), &quot;Test::b called without Test::init being called first&quot;);
+</span><span class="boring">        unsafe { &amp;*(self.b) }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span>fn main() {
+    let mut test1 = Test::new(&quot;test1&quot;);
+    test1.init();
+    let mut test2 = Test::new(&quot;test2&quot;);
+    test2.init();
+
+    println!(&quot;before swap: &amp;test1 {:p}, size {}&quot;, &amp;test1, std::mem::size_of::&lt;Test&gt;());
+
+    println!(&quot;test1: a: {} {:p}, b: {} {:p}&quot;, test1.a(), &amp;test1.a, test1.b(), test1.b);
+    println!(&quot;test2: a: {} {:p}, b: {} {:p}&quot;, test2.a(), &amp;test2.a, test2.b(), test2.b);
+    
+    std::mem::swap(&amp;mut test1, &amp;mut test2);
+
+    println!(&quot;after swap &amp;test2 {:p}, size {}&quot;, &amp;test2, std::mem::size_of::&lt;Test&gt;());
+
+    //test1.a = &quot;Surprise!&quot;.to_string();
+    println!(&quot;test1: a: {} {:p}, b: {} {:p}&quot;, test1.a(), &amp;test1.a, test1.b(), test1.b);
+    println!(&quot;test2: a: {} {:p}, b: {} {:p}&quot;, test2.a(), &amp;test2.a, test2.b(), test2.b);
+}</code></pre></pre>
+<p><strong>Fig 1: Before and after swap</strong>
+<img src="./img/swap_problem.jpg" alt="swap_problem" /></p>
+<h3 id="using-pin"><a class="header" href="#using-pin">Using Pin</a></h3>
+<p>To see how pinning helps, first make our structure <code>!Unpin</code> using
+<a href="https://doc.rust-lang.org/std/marker/struct.PhantomPinned.html">std::marker::PhantomPinned</a></p>
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate pin_utils;
+
+use std::marker::PhantomPinned;
+use pin_utils::pin_mut;
+
+#[derive(Debug)]
+struct Test {
+    a: String,
+    b: *const String,
+    _pin_me: PhantomPinned,
+}
+<span class="boring">
+</span><span class="boring">impl Test {
+</span><span class="boring">    fn new(txt: &amp;str) -&gt; Self {
+</span><span class="boring">        Test {
+</span><span class="boring">            a: String::from(txt),
+</span><span class="boring">            b: std::ptr::null(),
+</span><span class="boring">            _pin_me: PhantomPinned,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn init(&amp;mut self) {
+</span><span class="boring">        let self_ref: *const String = &amp;self.a;
+</span><span class="boring">        self.b = self_ref;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn a(&amp;self) -&gt; &amp;str {
+</span><span class="boring">        &amp;self.a
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn b(&amp;self) -&gt; &amp;String {
+</span><span class="boring">        assert!(!self.b.is_null(), &quot;Test::b called without Test::init being called first&quot;);
+</span><span class="boring">        unsafe { &amp;*(self.b) }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let mut test1 = Test::new(&quot;test1&quot;);
+</span><span class="boring">    test1.init();
+</span><span class="boring">    pin_mut!(test1);
+</span><span class="boring">    let mut test2 = Test::new(&quot;test2&quot;);
+</span><span class="boring">    test2.init();
+</span><span class="boring">    pin_mut!(test2);
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;before swap: &amp;test1 {:p}, size {}&quot;, &amp;test1, std::mem::size_of::&lt;Test&gt;());
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;test1: a: {} {:p}, b: {} {:p}&quot;, test1.a(), &amp;test1.a, test1.b(), test1.b);
+</span><span class="boring">    println!(&quot;test2: a: {} {:p}, b: {} {:p}&quot;, test2.a(), &amp;test2.a, test2.b(), test2.b);
+</span><span class="boring">    
+</span><span class="boring">    std::mem::swap(&amp;mut test1, &amp;mut test2);
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;after swap &amp;test2 {:p}, size {}&quot;, &amp;test2, std::mem::size_of::&lt;Test&gt;());
+</span><span class="boring">
+</span><span class="boring">    //test1.a = &quot;Surprise!&quot;.to_string();
+</span><span class="boring">    println!(&quot;test1: a: {} {:p}, b: {} {:p}&quot;, test1.a(), &amp;test1.a, test1.b(), test1.b);
+</span><span class="boring">    println!(&quot;test2: a: {} {:p}, b: {} {:p}&quot;, test2.a(), &amp;test2.a, test2.b(), test2.b);
+</span><span class="boring">}</span></code></pre></pre>
+<p>Then use the <a href="https://docs.rs/pin-utils/latest/pin_utils">pin-utils</a> crate to
+<code>Pin</code> our stack values:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">extern crate pin_utils;
+</span><span class="boring">
+</span><span class="boring">use std::marker::PhantomPinned;
+</span><span class="boring">use pin_utils::pin_mut;
+</span><span class="boring">
+</span><span class="boring">#[derive(Debug)]
+</span><span class="boring">struct Test {
+</span><span class="boring">    a: String,
+</span><span class="boring">    b: *const String,
+</span><span class="boring">    _pin_me: PhantomPinned,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Test {
+</span><span class="boring">    fn new(txt: &amp;str) -&gt; Self {
+</span><span class="boring">        Test {
+</span><span class="boring">            a: String::from(txt),
+</span><span class="boring">            b: std::ptr::null(),
+</span><span class="boring">            _pin_me: PhantomPinned,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn init(&amp;mut self) {
+</span><span class="boring">        let self_ref: *const String = &amp;self.a;
+</span><span class="boring">        self.b = self_ref;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn a(&amp;self) -&gt; &amp;str {
+</span><span class="boring">        &amp;self.a
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn b(&amp;self) -&gt; &amp;String {
+</span><span class="boring">        assert!(!self.b.is_null(), &quot;Test::b called without Test::init being called first&quot;);
+</span><span class="boring">        unsafe { &amp;*(self.b) }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span>fn main() {
+    let mut test1 = Test::new(&quot;test1&quot;);
+    test1.init();
+    pin_mut!(test1);
+    let mut test2 = Test::new(&quot;test2&quot;);
+    test2.init();
+    pin_mut!(test2);
+
+    println!(&quot;before swap: &amp;test1 {:p}, size {}&quot;, &amp;test1, std::mem::size_of::&lt;Test&gt;());
+
+    println!(&quot;test1: a: {} {:p}, b: {} {:p}&quot;, test1.a(), &amp;test1.a, test1.b(), test1.b);
+    println!(&quot;test2: a: {} {:p}, b: {} {:p}&quot;, test2.a(), &amp;test2.a, test2.b(), test2.b);
+    
+    std::mem::swap(&amp;mut test1, &amp;mut test2);
+
+    println!(&quot;after swap &amp;test2 {:p}, size {}&quot;, &amp;test2, std::mem::size_of::&lt;Test&gt;());
+
+    //test1.a = &quot;Surprise!&quot;.to_string();
+    println!(&quot;test1: a: {} {:p}, b: {} {:p}&quot;, test1.a(), &amp;test1.a, test1.b(), test1.b);
+    println!(&quot;test2: a: {} {:p}, b: {} {:p}&quot;, test2.a(), &amp;test2.a, test2.b(), test2.b);
+}</code></pre></pre>
+<p>You could also pin with <code>Box</code>:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use pin_utils::pin_mut; // `pin_utils` is a handy crate available on crates.io
+
+// A function which takes a `Future` that implements `Unpin`.
+fn execute_unpin_future(x: impl Future&lt;Output = ()&gt; + Unpin) { /* ... */ }
+
+let fut = async { /* ... */ };
+execute_unpin_future(fut); // Error: `fut` does not implement `Unpin` trait
+
+// Pinning with `Box`:
+let fut = async { /* ... */ };
+let fut = Box::pin(fut);
+execute_unpin_future(fut); // OK
+
+// Pinning with `pin_mut!`:
+let fut = async { /* ... */ };
+pin_mut!(fut);
+execute_unpin_future(fut); // OK
+<span class="boring">}</span></code></pre></pre>
+<h3 id="summary"><a class="header" href="#summary">Summary</a></h3>
+<ol>
+<li>If a type implements <code>Unpin</code>, then <code>Pin&lt;'a, T&gt;</code> is equivalent to <code>&amp;'a mut T</code>. i.e. <code>Unpin</code> means it's OK for this type to be moved even when pinned.</li>
+<li>Most types, including standard library types, implement <code>Unpin</code>.</li>
+<li><code>Futures</code> generated by async/await do <em>not</em> implement <code>Unpin</code>.</li>
+<li>You can pin both stack (<code>pin_mut!</code>) and heap data (<code>Box::pin</code>).</li>
+<li>Some pins require <code>unsafe</code>. You must follow the rules of the <em>pin contract</em> for your code to work.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="streams"><a class="header" href="#streams">Streams</a></h1>
+<p>The <code>Stream</code> trait is a <code>std::iter::Iterator</code> for Futures.
+The definition of <a href="https://docs.rs/futures/latest/futures/stream/trait.Stream.html">futures::stream::Stream</a> is:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait Stream {
+    type Item;
+
+    fn poll_next(self: Pin&lt;&amp;mut Self&gt;, cx: &amp;mut Context&lt;'_&gt;) -&gt; Poll&lt;Option&lt;Self::Item&gt;&gt;;
+
+    // Provided method
+    fn size_hint(&amp;self) -&gt; (usize, Option&lt;usize&gt;) { ... }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>Rust does not directly support <code>async for</code> loops, but you can emulate them with
+streams:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate tokio;
+
+use tokio_stream::StreamExt;
+
+#[tokio::main]
+async fn main() {
+    let mut stream = tokio_stream::iter(&amp;[1, 2, 3]);
+
+    while let Some(v) = stream.next().await {
+        println!(&quot;GOT = {:?}&quot;, v);
+    }
+}</code></pre></pre>
+<p>The <a href="https://docs.rs/futures/latest/futures/stream/trait.StreamExt.html">futures::stream::StreamExt</a>
+provides a variety of combinators, including <code>for_each_concurrent</code>:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use futures::{stream, StreamExt};
+use rand::{thread_rng, Rng};
+use std::time::Duration;
+
+#[tokio::main(flavor = &quot;multi_thread&quot;)]
+async fn main() {
+    stream::iter(0..200u64)
+        .for_each_concurrent(20, |number| async move {
+            let mut rng = thread_rng();
+            let sleep_ms: u64 = rng.gen_range(0..20);
+            tokio::time::sleep(Duration::from_millis(sleep_ms)).await;
+            println!(&quot;{}&quot;, number);
+        })
+        .await;
+}</code></pre></pre>
+<p>(example from: https://kerkour.com/rust-async-combinators)</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="spawning-tasks"><a class="header" href="#spawning-tasks">Spawning Tasks</a></h1>
+<p>Futures are inert and only advance when polled. To achieve <var>N</var>
+concurrent operations, you need to spawn <var>N-1</var> tasks.</p>
+<h3 id="join"><a class="header" href="#join">Join</a></h3>
+<p>In the example below, we should be able to dance while we learn to sing</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">extern crate async_std;
+</span><span class="boring">
+</span><span class="boring">use async_std::task::{block_on, sleep};
+</span><span class="boring">
+</span><span class="boring">use std::time::Duration;
+</span><span class="boring">
+</span>struct Song {
+    lyrics: String,
+}
+
+async fn learn_song() -&gt; Song {
+    println!(&quot;Learning...&quot;);
+    sleep(Duration::from_secs(5)).await;
+    Song { lyrics: &quot;Doe, a deer, a female deer; Ray, a drop of golden sun...&quot;.to_string() }
+}
+
+async fn sing_song(song: &amp;Song) {
+    println!(&quot;Singing! {}&quot;, song.lyrics);
+}
+
+async fn dance() {
+    for _ in 0..5 {
+        sleep(Duration::from_secs(1)).await;
+        println!(&quot;dancity-dance&quot;);
+    }
+}
+
+async fn learn_and_sing() {
+    // Wait until the song has been learned before singing it.
+    // We use `.await` here rather than `block_on` to prevent blocking the
+    // thread, which makes it possible to `dance` at the same time.
+    let song = learn_song().await;
+    sing_song(&amp;song).await;
+}
+
+async fn blocking() {
+    println!(&quot;Learn to sing and dance!\n&quot;);
+    learn_and_sing().await;
+    dance().await;
+}
+<span class="boring">
+</span><span class="boring">#[async_std::main]
+</span><span class="boring">async fn main() {
+</span><span class="boring">    block_on(blocking());
+</span><span class="boring">
+</span><span class="boring">    println!(&quot;\nLet's do both at once!&quot;);
+</span><span class="boring">
+</span><span class="boring">    let f1 = learn_and_sing();
+</span><span class="boring">    let f2 = dance();
+</span><span class="boring">
+</span><span class="boring">    // `join!` is like `.await` but can wait for multiple futures concurrently.
+</span><span class="boring">    // If we're temporarily blocked in the `learn_and_sing` future, the `dance`
+</span><span class="boring">    // future will take over the current thread. If `dance` becomes blocked,
+</span><span class="boring">    // `learn_and_sing` can take back over. If both futures are blocked, then
+</span><span class="boring">    // `main` is blocked and will yield to the executor.
+</span><span class="boring">    futures::join!(f1, f2);
+</span><span class="boring">}
+</span><span class="boring"></span></code></pre></pre>
+<p>But unless we use something like <code>spawn</code> or <code>join!</code> they won't occur at the
+same time:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">extern crate async_std;
+</span><span class="boring">
+</span><span class="boring">use async_std::task::{block_on, sleep};
+</span><span class="boring">
+</span><span class="boring">use std::time::Duration;
+</span><span class="boring">
+</span><span class="boring">struct Song {
+</span><span class="boring">    lyrics: String,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">async fn learn_song() -&gt; Song {
+</span><span class="boring">    println!(&quot;Learning...&quot;);
+</span><span class="boring">    sleep(Duration::from_secs(5)).await;
+</span><span class="boring">    Song { lyrics: &quot;Doe, a deer, a female deer; Ray, a drop of golden sun...&quot;.to_string() }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">async fn sing_song(song: &amp;Song) {
+</span><span class="boring">    println!(&quot;Singing! {}&quot;, song.lyrics);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">async fn dance() {
+</span><span class="boring">    for _ in 0..5 {
+</span><span class="boring">        sleep(Duration::from_secs(1)).await;
+</span><span class="boring">        println!(&quot;dancity-dance&quot;);
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">async fn learn_and_sing() {
+</span><span class="boring">    // Wait until the song has been learned before singing it.
+</span><span class="boring">    // We use `.await` here rather than `block_on` to prevent blocking the
+</span><span class="boring">    // thread, which makes it possible to `dance` at the same time.
+</span><span class="boring">    let song = learn_song().await;
+</span><span class="boring">    sing_song(&amp;song).await;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">async fn blocking() {
+</span><span class="boring">    println!(&quot;Learn to sing and dance!\n&quot;);
+</span><span class="boring">    learn_and_sing().await;
+</span><span class="boring">    dance().await;
+</span><span class="boring">}
+</span><span class="boring">
+</span>#[async_std::main]
+async fn main() {
+    block_on(blocking());
+
+    println!(&quot;\nLet's do both at once!&quot;);
+
+    let f1 = learn_and_sing();
+    let f2 = dance();
+
+    // `join!` is like `.await` but can wait for multiple futures concurrently.
+    // If we're temporarily blocked in the `learn_and_sing` future, the `dance`
+    // future will take over the current thread. If `dance` becomes blocked,
+    // `learn_and_sing` can take back over. If both futures are blocked, then
+    // `main` is blocked and will yield to the executor.
+    futures::join!(f1, f2);
+}
+<span class="boring"></span></code></pre></pre>
+<h3 id="cpu-intensive-tasks"><a class="header" href="#cpu-intensive-tasks">CPU-intensive tasks</a></h3>
+<p>Blocking or CPU-intensive tasks should not be run as <code>async</code>. Instead, you can
+use <a href="https://dtantsur.github.io/rust-openstack/tokio/task/fn.spawn_blocking.html">task::spawn_blocking</a> to offload work onto an OS thread:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate tokio;
+
+use tokio::task;
+
+fn fib_cpu_intensive(n: u32) -&gt; u32 {
+    match n {
+        0 =&gt; 0,
+        1 =&gt; 1,
+        n =&gt; fib_cpu_intensive(n - 1) + fib_cpu_intensive(n - 2),
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let threadpool_future = task::spawn_blocking(||fib_cpu_intensive(30));
+    println!(&quot;now we can do other things&quot;);
+    let n = threadpool_future.await.unwrap();
+    println!(&quot;answer is {n}&quot;);
+}</code></pre></pre>
+<p>(from https://blog.logrocket.com/a-practical-guide-to-async-in-rust/)</p>
+<h3 id="select"><a class="header" href="#select">Select</a></h3>
+<p><code>select</code> waits on multiple futures and returns as soon as <em>one</em> of the tasks
+completes. The other tasks are <em>dropped</em>. In that sense, <code>join</code> is like
+<var>AND</var> and <code>select</code> is like <var>OR</var>.</p>
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate tokio;
+
+use tokio::sync::oneshot;
+
+#[tokio::main]
+async fn main() {
+    let (tx1, rx1) = oneshot::channel();
+    let (tx2, rx2) = oneshot::channel();
+
+    tokio::spawn(async {
+        let _ = tx1.send(&quot;one&quot;);
+    });
+
+    tokio::spawn(async {
+        let _ = tx2.send(&quot;two&quot;);
+    });
+
+    tokio::select! {
+        val = rx1 =&gt; {
+            println!(&quot;rx1 completed first with {:?}&quot;, val);
+        }
+        val = rx2 =&gt; {
+            println!(&quot;rx2 completed first with {:?}&quot;, val);
+        }
+    }
+}</code></pre></pre>
+<p>(from https://tokio.rs/tokio/tutorial/select)</p>
+<h3 id="spawn"><a class="header" href="#spawn">Spawn</a></h3>
+<p>And last but not least, the canonical echo server :-)</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
+use std::error::Error;
+
+async fn handle_client(stream: &amp;mut TcpStream) -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt; {
+    let mut buf = vec![0, 80];
+
+    println!(&quot;Handling new client&quot;);
+    loop {
+        match stream.read(&amp;mut buf).await {
+            Ok(n) =&gt; {
+                if n == 0 {
+                    println!(&quot;Bye Bye!&quot;);
+                    break;
+                }
+                stream.write_all(&amp;buf[0..n]).await?;
+            },
+            Err(e) =&gt; {
+                println!(&quot;read failed: {e}&quot;);
+                return Err(Box::new(e));
+            },
+        }
+    }
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt; {
+    let listener = TcpListener::bind(&quot;127.0.0.1:50000&quot;).await?;
+
+    loop {
+        let (mut stream, _) = listener.accept().await?;
+        
+        // Now process this request without blocking the main loop
+        tokio::spawn(async move { handle_client(&amp;mut stream).await.unwrap(); });
+    }
 }</code></pre></pre>
 
                     </main>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>A Deeper Dive - Async/Await</title>
+        <title>Streams - Async/Await</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="deepdive.html" class="active"><strong aria-hidden="true">5.</strong> A Deeper Dive</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Async Programming</a></li><li class="chapter-item expanded "><a href="primer.html"><strong aria-hidden="true">2.</strong> Async/Await</a></li><li class="chapter-item expanded "><a href="futures.html"><strong aria-hidden="true">3.</strong> Futures</a></li><li class="chapter-item expanded "><a href="stdfuture.html"><strong aria-hidden="true">4.</strong> std::future::Future</a></li><li class="chapter-item expanded "><a href="runtimes.html"><strong aria-hidden="true">5.</strong> Runtimes</a></li><li class="chapter-item expanded "><a href="pinning.html"><strong aria-hidden="true">6.</strong> Pinning</a></li><li class="chapter-item expanded "><a href="streams.html" class="active"><strong aria-hidden="true">7.</strong> Streams</a></li><li class="chapter-item expanded "><a href="spawn.html"><strong aria-hidden="true">8.</strong> Spawning Tasks</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,48 +173,64 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="a-deeper-dive"><a class="header" href="#a-deeper-dive">A Deeper Dive</a></h1>
-<h3 id="runtimes"><a class="header" href="#runtimes">Runtimes</a></h3>
-<p>All <code>async</code> programs require a <em>runtime</em>. Both single- and multi-threaded
-runtimes are available:</p>
-<ul>
-<li><a href="https://crates.io/crates/tokio">tokio</a> - very popular, especially for sockets</li>
-<li><a href="https://crates.io/crates/async-std">async-std</a> - wraps the <code>std</code> library calls</li>
-</ul>
-<p>The runtimes will usually require that you enable some futures.</p>
-<pre><code class="language-cargo">[dependencies.async-std]
-version = &quot;1.12.0&quot;
-features = [&quot;attributes&quot;]
-</code></pre>
-<p>The runtimes can be explicitly started:</p>
-<pre><pre class="playground"><code class="language-rust">extern crate tokio;
+                        <h1 id="streams"><a class="header" href="#streams">Streams</a></h1>
+<p>The <code>Stream</code> trait is a <code>std::iter::Iterator</code> for Futures.
+The definition of <a href="https://docs.rs/futures/latest/futures/stream/trait.Stream.html">futures::stream::Stream</a> is:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait Stream {
+    type Item;
 
-use futures::prelude::*;
-use tokio::prelude::*;
+    fn poll_next(self: Pin&lt;&amp;mut Self&gt;, cx: &amp;mut Context&lt;'_&gt;) -&gt; Poll&lt;Option&lt;Self::Item&gt;&gt;;
 
-async fn app() {
-    todo!()
+    // Provided method
+    fn size_hint(&amp;self) -&gt; (usize, Option&lt;usize&gt;) { ... }
 }
+<span class="boring">}</span></code></pre></pre>
+<p>Rust does not directly support <code>async for</code> loops, but you can emulate them with
+streams:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">extern crate tokio;
 
-fn main() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
-    let future = app();
-    rt.block_on(future);
-}</code></pre></pre>
-<p>or the runtimes can be started using decorators:</p>
-<pre><pre class="playground"><code class="language-rust">#[tokio::main]
+use tokio_stream::StreamExt;
+
+#[tokio::main]
 async fn main() {
+    let mut stream = tokio_stream::iter(&amp;[1, 2, 3]);
 
+    while let Some(v) = stream.next().await {
+        println!(&quot;GOT = {:?}&quot;, v);
+    }
 }</code></pre></pre>
+<p>The <a href="https://docs.rs/futures/latest/futures/stream/trait.StreamExt.html">futures::stream::StreamExt</a>
+provides a variety of combinators, including <code>for_each_concurrent</code>:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use futures::{stream, StreamExt};
+use rand::{thread_rng, Rng};
+use std::time::Duration;
+
+#[tokio::main(flavor = &quot;multi_thread&quot;)]
+async fn main() {
+    stream::iter(0..200u64)
+        .for_each_concurrent(20, |number| async move {
+            let mut rng = thread_rng();
+            let sleep_ms: u64 = rng.gen_range(0..20);
+            tokio::time::sleep(Duration::from_millis(sleep_ms)).await;
+            println!(&quot;{}&quot;, number);
+        })
+        .await;
+}</code></pre></pre>
+<p>(example from: https://kerkour.com/rust-async-combinators)</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="stdfuture.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="pinning.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
+                            <a rel="next prefetch" href="spawn.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -222,10 +238,13 @@ async fn main() {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="stdfuture.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="pinning.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
+                    <a rel="next prefetch" href="spawn.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
