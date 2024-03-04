@@ -4,6 +4,7 @@ Rust does not have a builtin _runtime_, but all `async` programs require one.
 Both single- and multi-threaded runtimes are available:
 * [tokio](https://crates.io/crates/tokio) - very popular, especially for sockets
 * [async-std](https://crates.io/crates/async-std) - wraps the `std` library calls
+* [fuchsia-async](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/fuchsia-async/) - an executor for Google's Fuchsia OS.
 
 The runtimes will usually require that you enable some futures.
 

@@ -7,4 +7,6 @@
 - [Runtimes](./runtimes.md)
 - [Pinning](./pinning.md)
 - [Streams](./streams.md)
+- [Spawning Tasks](./spawn.md)
+
 

@@ -14,7 +14,8 @@ pub trait Stream {
 }
 ```
 
-Rust does not directly support `async for` loops.
+Rust does not directly support `async for` loops, but you can emulate them with
+streams:
 
 ```rust
 extern crate tokio;
@@ -30,4 +31,29 @@ async fn main() {
     }
 }
 ```
+
+The [futures::stream::StreamExt](https://docs.rs/futures/latest/futures/stream/trait.StreamExt.html)
+provides a variety of combinators, including `for_each_concurrent`:
+
+```rust
+use futures::{stream, StreamExt};
+use rand::{thread_rng, Rng};
+use std::time::Duration;
+
+#[tokio::main(flavor = "multi_thread")]
+async fn main() {
+    stream::iter(0..200u64)
+        .for_each_concurrent(20, |number| async move {
+            let mut rng = thread_rng();
+            let sleep_ms: u64 = rng.gen_range(0..20);
+            tokio::time::sleep(Duration::from_millis(sleep_ms)).await;
+            println!("{}", number);
+        })
+        .await;
+}
+```
+
+(example from: https://kerkour.com/rust-async-combinators)
+
+
 
