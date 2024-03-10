@@ -1,0 +1,533 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Dynamic Dispatch</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="oops.html"><strong aria-hidden="true">1.</strong> Is Rust an OOP</a></li><li class="chapter-item expanded "><a href="traits.html"><strong aria-hidden="true">2.</strong> Trait Objects</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Dynamic Dispatch</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="is-rust-an-object-orient-language"><a class="header" href="#is-rust-an-object-orient-language">Is Rust an Object-Orient Language?</a></h1>
+<p>Rust does not claim to be object oriented, yet it has many features that are
+found in languages that are object oriented. From the <em>Gang of Four</em> book:</p>
+<blockquote>
+<p>Object-oriented programs are made up of objects. An object packages both data
+and the procedures that operate on that data. The procedures are typically
+called methods or operations.</p>
+</blockquote>
+<p>Based on this definition, Rust is object-oriented, in that both structs and
+enums can have methods that refer to <code>self</code>.</p>
+<p><em>Encapsulation</em>, which hides implementation details, is another common feature
+of OOP. In Rust, the <code>pub</code> keyword can be used to control visibility. </p>
+<p>While Rust does not define <code>new</code> or constructors as part of the language, it
+definitely follows the RAII (Resource Acquisition is Initialization) model.
+It also uses scope, ownership and the <code>Drop</code> trait, which behave like
+destructors in object-oriented languages.</p>
+<p>Rust does not have inheritance, which means it does not have virtual functions
+or the <em>is-a</em> relationship.
+To some, polymorphism is synonymous with inheritance, and so by this definition
+Rust again fails to be an object-oriented language.</p>
+<p>We have seen that Rust <code>traits</code> are similar to <em>interfaces</em> in Java.
+The capabilities provided by traits is called <em>bounded parametric polymorphism</em>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="trait-objects"><a class="header" href="#trait-objects">Trait Objects</a></h1>
+<p>Can we implement polymorhism in Rust?</p>
+<p>Like C++, Rust arrays can only hold one type <code>Vec&lt;T&gt;</code>. It seems like without
+inheritance it is impossible to build a polymorphic array.</p>
+<p>The trick in Rust is to use <em>trait objects</em>. Like virtual functions (and
+interfaces), trait objects have a <code>vtable</code> that points to the methods that are
+defined by the trait. Each trait object also defines the data instance that the
+methods apply to.</p>
+<p>The trait <code>Payload</code> is reminiscient of a virtual base class in that it defines
+an APi and no data:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>trait Payload {
+    fn name(&amp;self) -&gt; &amp;'static str;
+
+    fn cmd(&amp;self, args: &amp;str) -&gt; u32;
+
+    fn get_telemetry(&amp;self) -&gt; String;
+}
+<span class="boring">}</span></code></pre></pre>
+<p>A vector or compound data structure has to be homogeneous in that it can only
+store elements of a single type. But we're specifically looking for objects of
+different types - with common properties. As usual, Rust <em>normalizes</em> the
+differences by using a pointer:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct Satellite {
+    payloads: Vec&lt;Box&lt;dyn Payload&gt;&gt;
+}
+<span class="boring">}</span></code></pre></pre>
+<p>The <code>dyn</code> keyword is used to indicate that the methods of the trait are
+<em>dynamically dispatched</em>.</p>
+<p>Let's define some <code>Payload</code> trait methods that can be dynamically dispatched:</p>
+<pre><pre class="playground"><code class="language-rust*+"><span class="boring">trait Payload {
+</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str;
+</span><span class="boring">
+</span><span class="boring">    fn cmd(&amp;self, args: &amp;str) -&gt; u32;
+</span><span class="boring">
+</span><span class="boring">    fn get_telemetry(&amp;self) -&gt; String;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">enum PayloadIDs {
+</span><span class="boring">    ADCS,
+</span><span class="boring">    DFGM,
+</span><span class="boring">    EPS,
+</span><span class="boring">    LAST,
+</span><span class="boring">}
+</span><span class="boring">
+</span>struct Adcs {
+    status: u32,
+}
+
+impl Payload for Adcs {
+    fn name(&amp;self) -&gt; &amp;'static str { &quot;ADCS&quot; }
+
+    fn cmd(&amp;self, args: &amp;str) -&gt; u32 {
+        println!(&quot;adcs got cmd {}&quot;, args);
+        self.status
+    }
+
+    fn get_telemetry(&amp;self) -&gt; String {
+        format!(&quot;[ADCS: status {}]&quot;, self.status).to_string()
+    }
+}
+
+struct Dfgm;
+    
+impl Payload for Dfgm {
+    fn name(&amp;self) -&gt; &amp;'static str { &quot;DFGM&quot; }
+
+    fn cmd(&amp;self, args: &amp;str) -&gt; u32 {
+        println!(&quot;dfgm got cmd {}&quot;, args);
+        0
+    }
+
+    fn get_telemetry(&amp;self) -&gt; String {
+        &quot;[DFGM: status 0]&quot;.to_string()
+    }
+}
+<span class="boring">
+</span><span class="boring">struct Satellite {
+</span><span class="boring">    payloads: Vec&lt;Box&lt;dyn Payload&gt;&gt;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Satellite {
+</span><span class="boring">    fn send_cmd(&amp;self, id: usize, args: &amp;str) -&gt; i32 {
+</span><span class="boring">        match self.payloads.get(id) {
+</span><span class="boring">            Some(subsys) =&gt; subsys.cmd(args) as i32,
+</span><span class="boring">            None =&gt; -1,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn system_status(&amp;self) -&gt; String {
+</span><span class="boring">        let mut telemetry = String::new();
+</span><span class="boring">        for p in self.payloads.iter() {
+</span><span class="boring">            telemetry.push_str(&amp;p.get_telemetry());
+</span><span class="boring">        }
+</span><span class="boring">        telemetry
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let satellite = Satellite {
+</span><span class="boring">        payloads: vec![
+</span><span class="boring">            Box::new(Adcs {
+</span><span class="boring">                status: 1
+</span><span class="boring">            }),
+</span><span class="boring">            Box::new(Dfgm {})
+</span><span class="boring">        ],
+</span><span class="boring">    };
+</span><span class="boring">
+</span><span class="boring">    
+</span><span class="boring">    let _ = satellite.send_cmd(PayloadIDs::DFGM as usize, &quot;sample frequency 10&quot;);
+</span><span class="boring">    let _ = satellite.send_cmd(PayloadIDs::ADCS as usize, &quot;detumble&quot;);
+</span><span class="boring">    let data = satellite.system_status();
+</span><span class="boring">    println!(&quot;telemetry: {}&quot;, data);
+</span><span class="boring">}
+</span><span class="boring"></span></code></pre></pre>
+<p>Now our <code>satellite</code> can work with the payloads anonymously:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">trait Payload {
+</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str;
+</span><span class="boring">
+</span><span class="boring">    fn cmd(&amp;self, args: &amp;str) -&gt; u32;
+</span><span class="boring">
+</span><span class="boring">    fn get_telemetry(&amp;self) -&gt; String;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">enum PayloadIDs {
+</span><span class="boring">    ADCS,
+</span><span class="boring">    DFGM,
+</span><span class="boring">    EPS,
+</span><span class="boring">    LAST,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct Adcs {
+</span><span class="boring">    status: u32,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Payload for Adcs {
+</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str { &quot;ADCS&quot; }
+</span><span class="boring">
+</span><span class="boring">    fn cmd(&amp;self, args: &amp;str) -&gt; u32 {
+</span><span class="boring">        println!(&quot;adcs got cmd {}&quot;, args);
+</span><span class="boring">        self.status
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn get_telemetry(&amp;self) -&gt; String {
+</span><span class="boring">        format!(&quot;[ADCS: status {}]&quot;, self.status).to_string()
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct Dfgm;
+</span><span class="boring">    
+</span><span class="boring">impl Payload for Dfgm {
+</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str { &quot;DFGM&quot; }
+</span><span class="boring">
+</span><span class="boring">    fn cmd(&amp;self, args: &amp;str) -&gt; u32 {
+</span><span class="boring">        println!(&quot;dfgm got cmd {}&quot;, args);
+</span><span class="boring">        0
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn get_telemetry(&amp;self) -&gt; String {
+</span><span class="boring">        &quot;[DFGM: status 0]&quot;.to_string()
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct Satellite {
+</span><span class="boring">    payloads: Vec&lt;Box&lt;dyn Payload&gt;&gt;
+</span><span class="boring">}
+</span><span class="boring">
+</span>impl Satellite {
+    fn send_cmd(&amp;self, id: usize, args: &amp;str) -&gt; i32 {
+        match self.payloads.get(id) {
+            Some(subsys) =&gt; subsys.cmd(args) as i32,
+            None =&gt; -1,
+        }
+    }
+
+    fn system_status(&amp;self) -&gt; String {
+        let mut telemetry = String::new();
+        for p in self.payloads.iter() {
+            telemetry.push_str(&amp;p.get_telemetry());
+        }
+        telemetry
+    }
+}
+<span class="boring">
+</span><span class="boring">fn main() {
+</span><span class="boring">    let satellite = Satellite {
+</span><span class="boring">        payloads: vec![
+</span><span class="boring">            Box::new(Adcs {
+</span><span class="boring">                status: 1
+</span><span class="boring">            }),
+</span><span class="boring">            Box::new(Dfgm {})
+</span><span class="boring">        ],
+</span><span class="boring">    };
+</span><span class="boring">
+</span><span class="boring">    
+</span><span class="boring">    let _ = satellite.send_cmd(PayloadIDs::DFGM as usize, &quot;sample frequency 10&quot;);
+</span><span class="boring">    let _ = satellite.send_cmd(PayloadIDs::ADCS as usize, &quot;detumble&quot;);
+</span><span class="boring">    let data = satellite.system_status();
+</span><span class="boring">    println!(&quot;telemetry: {}&quot;, data);
+</span><span class="boring">}
+</span><span class="boring"></span></code></pre></pre>
+<p>Here's how we can instantiate the heterogeneous list of payloads:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">trait Payload {
+</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str;
+</span><span class="boring">
+</span><span class="boring">    fn cmd(&amp;self, args: &amp;str) -&gt; u32;
+</span><span class="boring">
+</span><span class="boring">    fn get_telemetry(&amp;self) -&gt; String;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">enum PayloadIDs {
+</span><span class="boring">    ADCS,
+</span><span class="boring">    DFGM,
+</span><span class="boring">    EPS,
+</span><span class="boring">    LAST,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct Adcs {
+</span><span class="boring">    status: u32,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Payload for Adcs {
+</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str { &quot;ADCS&quot; }
+</span><span class="boring">
+</span><span class="boring">    fn cmd(&amp;self, args: &amp;str) -&gt; u32 {
+</span><span class="boring">        println!(&quot;adcs got cmd {}&quot;, args);
+</span><span class="boring">        self.status
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn get_telemetry(&amp;self) -&gt; String {
+</span><span class="boring">        format!(&quot;[ADCS: status {}]&quot;, self.status).to_string()
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct Dfgm;
+</span><span class="boring">    
+</span><span class="boring">impl Payload for Dfgm {
+</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str { &quot;DFGM&quot; }
+</span><span class="boring">
+</span><span class="boring">    fn cmd(&amp;self, args: &amp;str) -&gt; u32 {
+</span><span class="boring">        println!(&quot;dfgm got cmd {}&quot;, args);
+</span><span class="boring">        0
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn get_telemetry(&amp;self) -&gt; String {
+</span><span class="boring">        &quot;[DFGM: status 0]&quot;.to_string()
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct Satellite {
+</span><span class="boring">    payloads: Vec&lt;Box&lt;dyn Payload&gt;&gt;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Satellite {
+</span><span class="boring">    fn send_cmd(&amp;self, id: usize, args: &amp;str) -&gt; i32 {
+</span><span class="boring">        match self.payloads.get(id) {
+</span><span class="boring">            Some(subsys) =&gt; subsys.cmd(args) as i32,
+</span><span class="boring">            None =&gt; -1,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn system_status(&amp;self) -&gt; String {
+</span><span class="boring">        let mut telemetry = String::new();
+</span><span class="boring">        for p in self.payloads.iter() {
+</span><span class="boring">            telemetry.push_str(&amp;p.get_telemetry());
+</span><span class="boring">        }
+</span><span class="boring">        telemetry
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span>fn main() {
+    let satellite = Satellite {
+        payloads: vec![
+            Box::new(Adcs {
+                status: 1
+            }),
+            Box::new(Dfgm {})
+        ],
+    };
+
+    
+    let _ = satellite.send_cmd(PayloadIDs::DFGM as usize, &quot;sample frequency 10&quot;);
+    let _ = satellite.send_cmd(PayloadIDs::ADCS as usize, &quot;detumble&quot;);
+    let data = satellite.system_status();
+    println!(&quot;telemetry: {}&quot;, data);
+}
+<span class="boring"></span></code></pre></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>
