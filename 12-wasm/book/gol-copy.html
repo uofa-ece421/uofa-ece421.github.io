@@ -1,0 +1,503 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Simple Game of Life - Web Assembly</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="wasm.html"><strong aria-hidden="true">1.</strong> Web Assembly</a></li><li class="chapter-item expanded "><a href="sexpr.html"><strong aria-hidden="true">2.</strong> S-expressions</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">3.</strong> Rust and WASM</a></li><li class="chapter-item expanded "><a href="bindgen.html"><strong aria-hidden="true">4.</strong> wasm-pack</a></li><li class="chapter-item expanded "><a href="gol-copy.html" class="active"><strong aria-hidden="true">5.</strong> Simple Game of Life</a></li><li class="chapter-item expanded "><a href="gol-direct.html"><strong aria-hidden="true">6.</strong> Better Game of Life</a></li><li class="chapter-item expanded "><a href="interop.html"><strong aria-hidden="true">7.</strong> Interoperability</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Web Assembly</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="simple-game-of-life"><a class="header" href="#simple-game-of-life">Simple Game of Life</a></h1>
+<p>In this example we'll show how html, JavScript, WebAssembly, and Rust all work
+together.</p>
+<p>In this simple version, we'll just render the universe into a preformatted area
+of the screen</p>
+<pre><code class="language-html">  &lt;body&gt;
+    &lt;pre id=&quot;game-of-life-canvas&quot;&gt;&lt;/pre&gt;
+    &lt;script src=&quot;./bootstrap.js&quot;&gt;&lt;/script&gt;
+  &lt;/body&gt;
+</code></pre>
+<p>The JavaScript creates the Rust <code>Universe</code> and starts the <code>renderLoop</code>, which
+gets a callback every <code>tick</code> to update the screen.</p>
+<pre><code class="language-javascript">import { Universe } from &quot;wasm-game-of-life&quot;;
+
+const pre = document.getElementById(&quot;game-of-life-canvas&quot;);
+const universe = Universe.new();
+
+const renderLoop = () =&gt; {
+  pre.textContent = universe.render(); // copy the new Universe into the textbox
+  universe.tick(); // move the universe ahead by one step
+
+  requestAnimationFrame(renderLoop);
+};
+
+requestAnimationFrame(renderLoop);
+</code></pre>
+<p>The Rust <code>Universe</code> is an array of cells:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">mod utils;
+</span><span class="boring">
+</span>use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Cell {
+    Dead = 0,
+    Alive = 1,
+}
+
+#[wasm_bindgen]
+pub struct Universe {
+    width: u32,
+    height: u32,
+    cells: Vec&lt;Cell&gt;,
+}
+<span class="boring">
+</span><span class="boring">impl Universe {
+</span><span class="boring">    fn get_index(&amp;self, row: u32, column: u32) -&gt; usize {
+</span><span class="boring">        (row * self.width + column) as usize
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn live_neighbor_count(&amp;self, row: u32, column: u32) -&gt; u8 {
+</span><span class="boring">        let mut count = 0;
+</span><span class="boring">        for delta_row in [self.height - 1, 0, 1].iter().cloned() {
+</span><span class="boring">            for delta_col in [self.width - 1, 0, 1].iter().cloned() {
+</span><span class="boring">                if delta_row == 0 &amp;&amp; delta_col == 0 {
+</span><span class="boring">                    continue;
+</span><span class="boring">                }
+</span><span class="boring">
+</span><span class="boring">                let neighbor_row = (row + delta_row) % self.height;
+</span><span class="boring">                let neighbor_col = (column + delta_col) % self.width;
+</span><span class="boring">                let idx = self.get_index(neighbor_row, neighbor_col);
+</span><span class="boring">                count += self.cells[idx] as u8;
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">        count
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/// Public methods, exported to JavaScript.
+</span><span class="boring">#[wasm_bindgen]
+</span><span class="boring">impl Universe {
+</span><span class="boring">    pub fn tick(&amp;mut self) {
+</span><span class="boring">        let mut next = self.cells.clone();
+</span><span class="boring">
+</span><span class="boring">        for row in 0..self.height {
+</span><span class="boring">            for col in 0..self.width {
+</span><span class="boring">                let idx = self.get_index(row, col);
+</span><span class="boring">                let cell = self.cells[idx];
+</span><span class="boring">                let live_neighbors = self.live_neighbor_count(row, col);
+</span><span class="boring">
+</span><span class="boring">                let next_cell = match (cell, live_neighbors) {
+</span><span class="boring">                    // Rule 1: Any live cell with fewer than two live neighbours
+</span><span class="boring">                    // dies, as if caused by underpopulation.
+</span><span class="boring">                    (Cell::Alive, x) if x &lt; 2 =&gt; Cell::Dead,
+</span><span class="boring">                    // Rule 2: Any live cell with two or three live neighbours
+</span><span class="boring">                    // lives on to the next generation.
+</span><span class="boring">                    (Cell::Alive, 2) | (Cell::Alive, 3) =&gt; Cell::Alive,
+</span><span class="boring">                    // Rule 3: Any live cell with more than three live
+</span><span class="boring">                    // neighbours dies, as if by overpopulation.
+</span><span class="boring">                    (Cell::Alive, x) if x &gt; 3 =&gt; Cell::Dead,
+</span><span class="boring">                    // Rule 4: Any dead cell with exactly three live neighbours
+</span><span class="boring">                    // becomes a live cell, as if by reproduction.
+</span><span class="boring">                    (Cell::Dead, 3) =&gt; Cell::Alive,
+</span><span class="boring">                    // All other cells remain in the same state.
+</span><span class="boring">                    (otherwise, _) =&gt; otherwise,
+</span><span class="boring">                };
+</span><span class="boring">
+</span><span class="boring">                next[idx] = next_cell;
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">
+</span><span class="boring">        self.cells = next;
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    pub fn new() -&gt; Universe {
+</span><span class="boring">        let width = 64;
+</span><span class="boring">        let height = 64;
+</span><span class="boring">
+</span><span class="boring">        let cells = (0..width * height)
+</span><span class="boring">            .map(|i| {
+</span><span class="boring">                if i % 2 == 0 || i % 7 == 0 {
+</span><span class="boring">                    Cell::Alive
+</span><span class="boring">                } else {
+</span><span class="boring">                    Cell::Dead
+</span><span class="boring">                }
+</span><span class="boring">            })
+</span><span class="boring">            .collect();
+</span><span class="boring">
+</span><span class="boring">        Universe {
+</span><span class="boring">            width,
+</span><span class="boring">            height,
+</span><span class="boring">            cells,
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    pub fn render(&amp;self) -&gt; String {
+</span><span class="boring">        self.to_string()
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">impl fmt::Display for Universe {
+</span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+</span><span class="boring">        for line in self.cells.as_slice().chunks(self.width as usize) {
+</span><span class="boring">            for &amp;cell in line {
+</span><span class="boring">                let symbol = if cell == Cell::Dead { '◻' } else { '◼' };
+</span><span class="boring">                write!(f, &quot;{}&quot;, symbol)?;
+</span><span class="boring">            }
+</span><span class="boring">            write!(f, &quot;\n&quot;)?;
+</span><span class="boring">        }
+</span><span class="boring">
+</span><span class="boring">        Ok(())
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">}</span></code></pre></pre>
+<p>To create and render the universe:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">mod utils;
+</span><span class="boring">
+</span><span class="boring">use wasm_bindgen::prelude::*;
+</span><span class="boring">
+</span><span class="boring">#[wasm_bindgen]
+</span><span class="boring">#[repr(u8)]
+</span><span class="boring">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+</span><span class="boring">pub enum Cell {
+</span><span class="boring">    Dead = 0,
+</span><span class="boring">    Alive = 1,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">#[wasm_bindgen]
+</span><span class="boring">pub struct Universe {
+</span><span class="boring">    width: u32,
+</span><span class="boring">    height: u32,
+</span><span class="boring">    cells: Vec&lt;Cell&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Universe {
+</span><span class="boring">    fn get_index(&amp;self, row: u32, column: u32) -&gt; usize {
+</span><span class="boring">        (row * self.width + column) as usize
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn live_neighbor_count(&amp;self, row: u32, column: u32) -&gt; u8 {
+</span><span class="boring">        let mut count = 0;
+</span><span class="boring">        for delta_row in [self.height - 1, 0, 1].iter().cloned() {
+</span><span class="boring">            for delta_col in [self.width - 1, 0, 1].iter().cloned() {
+</span><span class="boring">                if delta_row == 0 &amp;&amp; delta_col == 0 {
+</span><span class="boring">                    continue;
+</span><span class="boring">                }
+</span><span class="boring">
+</span><span class="boring">                let neighbor_row = (row + delta_row) % self.height;
+</span><span class="boring">                let neighbor_col = (column + delta_col) % self.width;
+</span><span class="boring">                let idx = self.get_index(neighbor_row, neighbor_col);
+</span><span class="boring">                count += self.cells[idx] as u8;
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">        count
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/// Public methods, exported to JavaScript.
+</span><span class="boring">#[wasm_bindgen]
+</span><span class="boring">impl Universe {
+</span><span class="boring">    pub fn tick(&amp;mut self) {
+</span><span class="boring">        let mut next = self.cells.clone();
+</span><span class="boring">
+</span><span class="boring">        for row in 0..self.height {
+</span><span class="boring">            for col in 0..self.width {
+</span><span class="boring">                let idx = self.get_index(row, col);
+</span><span class="boring">                let cell = self.cells[idx];
+</span><span class="boring">                let live_neighbors = self.live_neighbor_count(row, col);
+</span><span class="boring">
+</span><span class="boring">                let next_cell = match (cell, live_neighbors) {
+</span><span class="boring">                    // Rule 1: Any live cell with fewer than two live neighbours
+</span><span class="boring">                    // dies, as if caused by underpopulation.
+</span><span class="boring">                    (Cell::Alive, x) if x &lt; 2 =&gt; Cell::Dead,
+</span><span class="boring">                    // Rule 2: Any live cell with two or three live neighbours
+</span><span class="boring">                    // lives on to the next generation.
+</span><span class="boring">                    (Cell::Alive, 2) | (Cell::Alive, 3) =&gt; Cell::Alive,
+</span><span class="boring">                    // Rule 3: Any live cell with more than three live
+</span><span class="boring">                    // neighbours dies, as if by overpopulation.
+</span><span class="boring">                    (Cell::Alive, x) if x &gt; 3 =&gt; Cell::Dead,
+</span><span class="boring">                    // Rule 4: Any dead cell with exactly three live neighbours
+</span><span class="boring">                    // becomes a live cell, as if by reproduction.
+</span><span class="boring">                    (Cell::Dead, 3) =&gt; Cell::Alive,
+</span><span class="boring">                    // All other cells remain in the same state.
+</span><span class="boring">                    (otherwise, _) =&gt; otherwise,
+</span><span class="boring">                };
+</span><span class="boring">
+</span><span class="boring">                next[idx] = next_cell;
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">
+</span><span class="boring">        self.cells = next;
+</span><span class="boring">    }
+</span><span class="boring">
+</span>    pub fn new() -&gt; Universe {
+        let width = 64;
+        let height = 64;
+
+        let cells = (0..width * height)
+            .map(|i| {
+                if i % 2 == 0 || i % 7 == 0 {
+                    Cell::Alive
+                } else {
+                    Cell::Dead
+                }
+            })
+            .collect();
+
+        Universe {
+            width,
+            height,
+            cells,
+        }
+    }
+
+    pub fn render(&amp;self) -&gt; String {
+        self.to_string()
+    }
+}
+
+use std::fmt;
+
+impl fmt::Display for Universe {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+        for line in self.cells.as_slice().chunks(self.width as usize) {
+            for &amp;cell in line {
+                let symbol = if cell == Cell::Dead { '◻' } else { '◼' };
+                write!(f, &quot;{}&quot;, symbol)?;
+            }
+            write!(f, &quot;\n&quot;)?;
+        }
+
+        Ok(())
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>The JavaScript for this version is simple because Rust is doing both the
+game logic and the rendering. However, we are serializing and copying the
+entire universe across the boundary on every tick!</p>
+<p>(from the <a href="https://rustwasm.github.io/docs/book/game-of-life/introduction.html">Rust and WebAssembly Tutorial</a></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="bindgen.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="gol-direct.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="bindgen.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="gol-direct.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
