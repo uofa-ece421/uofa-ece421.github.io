@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Benchmarking and Tuning - Concurrency in Rust</title>
+        <title>Scoped Threads - Concurrency in Rust</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="closures.html"><strong aria-hidden="true">1.</strong> Closures</a></li><li class="chapter-item expanded "><a href="cvp.html"><strong aria-hidden="true">2.</strong> Concurrency vs Parallelism</a></li><li class="chapter-item expanded "><a href="threads.html"><strong aria-hidden="true">3.</strong> Introduction to Threads</a></li><li class="chapter-item expanded "><a href="channels.html"><strong aria-hidden="true">4.</strong> Channels</a></li><li class="chapter-item expanded "><a href="request-response.html"><strong aria-hidden="true">5.</strong> Request/Response</a></li><li class="chapter-item expanded "><a href="parallel.html"><strong aria-hidden="true">6.</strong> Parallelism</a></li><li class="chapter-item expanded "><a href="locks.html"><strong aria-hidden="true">7.</strong> Locks</a></li><li class="chapter-item expanded "><a href="quicksort.html"><strong aria-hidden="true">8.</strong> Parallelizing Quicksort</a></li><li class="chapter-item expanded "><a href="bench.html" class="active"><strong aria-hidden="true">9.</strong> Benchmarking and Tuning</a></li><li class="chapter-item expanded "><a href="pools.html"><strong aria-hidden="true">10.</strong> Thread Pools</a></li><li class="chapter-item expanded "><a href="scope.html"><strong aria-hidden="true">11.</strong> Scoped Threads</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="closures.html"><strong aria-hidden="true">1.</strong> Closures</a></li><li class="chapter-item expanded "><a href="cvp.html"><strong aria-hidden="true">2.</strong> Concurrency vs Parallelism</a></li><li class="chapter-item expanded "><a href="threads.html"><strong aria-hidden="true">3.</strong> Introduction to Threads</a></li><li class="chapter-item expanded "><a href="channels.html"><strong aria-hidden="true">4.</strong> Channels</a></li><li class="chapter-item expanded "><a href="request-response.html"><strong aria-hidden="true">5.</strong> Request/Response</a></li><li class="chapter-item expanded "><a href="parallel.html"><strong aria-hidden="true">6.</strong> Parallelism</a></li><li class="chapter-item expanded "><a href="locks.html"><strong aria-hidden="true">7.</strong> Locks</a></li><li class="chapter-item expanded "><a href="quicksort.html"><strong aria-hidden="true">8.</strong> Parallelizing Quicksort</a></li><li class="chapter-item expanded "><a href="bench.html"><strong aria-hidden="true">9.</strong> Benchmarking and Tuning</a></li><li class="chapter-item expanded "><a href="pools.html"><strong aria-hidden="true">10.</strong> Thread Pools</a></li><li class="chapter-item expanded "><a href="scope.html" class="active"><strong aria-hidden="true">11.</strong> Scoped Threads</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,162 +173,316 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="benchmarking-and-tuning"><a class="header" href="#benchmarking-and-tuning">Benchmarking and Tuning</a></h1>
-<p>Let's see what awesome speedup we get!</p>
-<p>First, setup a test harness</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">extern crate rand;
+                        <h1 id="scoped-threads"><a class="header" href="#scoped-threads">Scoped Threads</a></h1>
+<p>We need to create a scope, as desribed in <a href="https://doc.rust-lang.org/nightly/std/thread/fn.scope.html">std::thread::scope</a></p>
+<p>And then we use <a href="https://doc.rust-lang.org/nightly/std/mem/fn.transmute.html">std::mem::transmute</a> to lie:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">use std::thread;
+</span><span class="boring">use std::mem;
+</span><span class="boring">use std::sync::{mpsc, Mutex};
+</span><span class="boring">use std::marker::PhantomData;
 </span><span class="boring">
-</span><span class="boring">use std::env;
-</span><span class="boring">use rand::Rng;
-</span><span class="boring">use std::time::Instant;
-</span><span class="boring">use std::convert::TryInto;
-</span><span class="boring">
-</span><span class="boring">const MILLION: usize = 1024*1024;
-</span><span class="boring">
-</span><span class="boring">fn quicksort&lt;T: PartialOrd&gt;(v: &amp;mut [T]) {
-</span><span class="boring">    if v.len() &lt;= 1 {
-</span><span class="boring">        return;
-</span><span class="boring">    }
-</span><span class="boring">
-</span><span class="boring">    let mid = partition(v);
-</span><span class="boring">    let (lo, hi) = v.split_at_mut(mid);
-</span><span class="boring">    quicksort(lo);
-</span><span class="boring">    quicksort(hi);
+</span><span class="boring">pub struct ThreadPool {
+</span><span class="boring">    threads: Mutex&lt;Vec&lt;Worker&gt;&gt;
 </span><span class="boring">}
 </span><span class="boring">
-</span><span class="boring">fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) {
-</span><span class="boring">    if v.len() &lt;= 1 {
-</span><span class="boring">        return;
+</span><span class="boring">impl ThreadPool {
+</span><span class="boring">    pub fn new(n: usize) -&gt; ThreadPool {
+</span><span class="boring">        let threads = Mutex::new(Vec::with_capacity(n));
+</span><span class="boring">        {
+</span><span class="boring">            let mut workers = threads.lock().unwrap();
+</span><span class="boring">            for i in 0..n {
+</span><span class="boring">                workers.push(Worker::new(i));
+</span><span class="boring">            }
+</span><span class="boring">        }
+</span><span class="boring">        ThreadPool { threads }
 </span><span class="boring">    }
 </span><span class="boring">
-</span><span class="boring">    if v.len() &lt;= 2048 {
-</span><span class="boring">        quicksort(v);
-</span><span class="boring">        return;
-</span><span class="boring">    }
-</span><span class="boring">
-</span><span class="boring">    crossbeam::scope(|scope| {
-</span><span class="boring">        let mid = partition(v);
-</span><span class="boring">        let (lo, hi) = v.split_at_mut(mid);
-</span><span class="boring">        scope.spawn(move |_| parallel_quicksort(lo));
-</span><span class="boring">        scope.spawn(move |_| parallel_quicksort(hi));
-</span><span class="boring">    }).expect(&quot;thread spawn failed&quot;);
-</span><span class="boring">}
-</span><span class="boring">
-</span><span class="boring">fn partition&lt;T: PartialOrd&gt;(v: &amp;mut [T]) -&gt; usize {
-</span><span class="boring">    let hi = v.len() - 1;
-</span><span class="boring">    let lo = 0;
-</span><span class="boring">    let pivot = hi;
-</span><span class="boring">
-</span><span class="boring">    let mut i = 0;
-</span><span class="boring">    for j in lo..hi {
-</span><span class="boring">        if v[j] &lt;= v[pivot] {
-</span><span class="boring">            v.swap(i, j);
-</span><span class="boring">            i += 1;
+</span><span class="boring">    fn execute(&amp;self, job: Task) -&gt; Worker {
+</span><span class="boring">        let worker = {
+</span><span class="boring">            let mut workers = self.threads.lock().unwrap();
+</span><span class="boring">            workers.pop()
+</span><span class="boring">        };
+</span><span class="boring">        match worker {
+</span><span class="boring">            Some(w) =&gt; {
+</span><span class="boring">                w.sender.send(job).unwrap();
+</span><span class="boring">                w
+</span><span class="boring">            },
+</span><span class="boring">            None =&gt; panic!(&quot;No more threads!&quot;),
 </span><span class="boring">        }
 </span><span class="boring">    }
-</span><span class="boring">    v.swap(i, pivot);
-</span><span class="boring">    i
-</span><span class="boring">}
 </span><span class="boring">
-</span><span class="boring">fn initialize_data(len: usize) -&gt; Vec&lt;u32&gt; {
-</span><span class="boring">    let mut data = Vec::with_capacity(len);
-</span><span class="boring">    let mut rng = rand::thread_rng();
+</span><span class="boring">    pub fn wait(&amp;self, w: Worker) {
+</span><span class="boring">        w.receiver.recv().expect(&amp;format!(&quot;wait {} receive error&quot;, w.id));
 </span><span class="boring">
-</span><span class="boring">    data.resize(len, 0);
-</span><span class="boring">    for i in 0..len {
-</span><span class="boring">        data[i] = rng.gen_range(0..len).try_into().unwrap();
+</span><span class="boring">        let mut workers = self.threads.lock().unwrap();
+</span><span class="boring">        workers.push(w);
 </span><span class="boring">    }
-</span><span class="boring">    data
+</span><span class="boring">
+</span><span class="boring">    pub fn drain(&amp;self) {
+</span><span class="boring">        let mut workers = self.threads.lock().unwrap();
+</span><span class="boring">        while let Some(w) = workers.pop() {
+</span><span class="boring">            w.sender.send(Task::Quit).expect(&amp;format!(&quot;send quit to {} failed&quot;, w.id));
+</span><span class="boring">            w.thread.join().expect(&amp;format!(&quot;join with {} failed&quot;, w.id));
+</span><span class="boring">        }
+</span><span class="boring">    }
+</span><span class="boring">
+</span>    pub fn scoped&lt;'pool, 'scope, F, R&gt;(&amp;'pool self, f: F) -&gt; R
+    where F: FnOnce(&amp;Scope&lt;'pool, 'scope&gt;) -&gt; R
+    {
+        let scope = Scope {
+            pool: self,
+            _marker: PhantomData,
+        };
+        f(&amp;scope)
+    }
+}
+
+pub struct Scope&lt;'pool, 'scope&gt; {
+    pool: &amp;'pool ThreadPool,
+    // The 'scope needs to be invariant... it seems?
+    _marker: PhantomData&lt;::std::cell::Cell&lt;&amp;'scope mut ()&gt;&gt;,
+}
+
+impl&lt;'pool, 'scope&gt; Scope&lt;'pool, 'scope&gt; {
+    /* Execute a scoped job on the threadpool.
+     *
+     *The body of the closure will be sent to one of the internal threads
+     */
+    pub fn execute&lt;F&gt;(&amp;self, f: F) -&gt; Worker
+    where F: FnOnce() + Send + 'scope {
+        self.execute_(f)
+    }
+
+    fn execute_&lt;F&gt;(&amp;self, f: F) -&gt; Worker
+    where F: FnOnce() + Send + 'scope {
+        let b = unsafe {
+            mem::transmute::&lt;Job&lt;'scope&gt;, Job&lt;'static&gt;&gt;(Box::new(f))
+        };
+        self.pool.execute(Task::Work(b))
+    }
+}
+
+type Job&lt;'a&gt; = Box&lt;dyn FnOnce() + Send + 'a&gt;;
+
+pub enum Task {
+    Quit,
+    Work(Job&lt;'static&gt;),
+}
+<span class="boring">
+</span><span class="boring">pub struct Worker {
+</span><span class="boring">    id: usize,
+</span><span class="boring">    sender: mpsc::Sender&lt;Task&gt;,
+</span><span class="boring">    receiver: mpsc::Receiver&lt;bool&gt;,
+</span><span class="boring">    thread: thread::JoinHandle&lt;()&gt;,
 </span><span class="boring">}
 </span><span class="boring">
-</span>fn reinitialize_data(v: &amp;mut [u32]) {
-    let mut rng = rand::thread_rng();
-    let len = v.len();
-    for i in 0..len {
-        v[i] = rng.gen_range(0..len).try_into().unwrap();
-    }
+</span><span class="boring">impl Worker {
+</span><span class="boring">    fn new(id: usize) -&gt; Worker {
+</span><span class="boring">        let (thread_sender, thread_receiver) = mpsc::channel(); 
+</span><span class="boring">        let (mgr_sender, mgr_receiver) = mpsc::channel(); 
+</span><span class="boring">        let thread = thread::spawn(move || {
+</span><span class="boring">            loop {
+</span><span class="boring">                let work: Task = thread_receiver.recv().unwrap();
+</span><span class="boring">                match work {
+</span><span class="boring">                    Task::Quit =&gt; {
+</span><span class="boring">                        break;
+</span><span class="boring">                    },
+</span><span class="boring">                    Task::Work(job) =&gt; {
+</span><span class="boring">                        job();
+</span><span class="boring">                    },
+</span><span class="boring">                }
+</span><span class="boring">                mgr_sender.send(true).expect(&quot;failed manager send&quot;);
+</span><span class="boring">            }
+</span><span class="boring">        });
+</span><span class="boring">
+</span><span class="boring">        Worker { id, sender: thread_sender, receiver: mgr_receiver, thread }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">}</span></code></pre></pre>
+<p>The rest of the pool is more or less the same, <em>except</em>:</p>
+<ul>
+<li>lock <em>only</em> the vector of workers
+<ul>
+<li>only need to hold lock for <code>push</code>/<code>pop</code></li>
+<li>all <code>&amp;mut self</code> methods become <code>&amp;self</code></li>
+</ul>
+</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">use std::thread;
+</span><span class="boring">use std::mem;
+</span><span class="boring">use std::sync::{mpsc, Mutex};
+</span><span class="boring">use std::marker::PhantomData;
+</span><span class="boring">
+</span>pub struct ThreadPool {
+    threads: Mutex&lt;Vec&lt;Worker&gt;&gt;
 }
 
-fn bench&lt;F: FnOnce(&amp;mut [u32])&gt;(sort: F, data: &amp;mut [u32]) -&gt; u64 {
-    reinitialize_data(data);
-
-    let start = Instant::now();
-    sort(data);
-    let elapsed = Instant::now() - start;
-
-    if !data.windows(2).all(|w| w[0] &lt;= w[1]) {
-        println!(&quot;sort failed!&quot;);
-    }
-
-    u64::from(elapsed.subsec_micros()) + elapsed.as_secs()*1000000u64
-}
-
-fn main() {
-    let args: Vec&lt;String&gt; = env::args().collect();
-
-    // First argument is the vector length
-    let len = match args.get(1) {
-        Some(slen) =&gt; match slen.parse::&lt;usize&gt;() {
-            Ok(num) =&gt; num,
-            Err(e) =&gt; {
-                println!(&quot;ignoring bad length: {}&quot;, e);
-                MILLION as usize
+impl ThreadPool {
+    pub fn new(n: usize) -&gt; ThreadPool {
+        let threads = Mutex::new(Vec::with_capacity(n));
+        {
+            let mut workers = threads.lock().unwrap();
+            for i in 0..n {
+                workers.push(Worker::new(i));
             }
-        },
-        None =&gt; MILLION as usize,
-    };
-
-    let mut data = initialize_data(len);
-
-    let mut par_mean: f64 = 0.0;
-    for run in 0..10 {
-        let elapsed = bench(parallel_quicksort, &amp;mut data);
-        println!(&quot;parallel {}: {} usec&quot;, run, elapsed);
-        par_mean += elapsed as f64;
+        }
+        ThreadPool { threads }
     }
-    par_mean /= 10.0;
-    println!(&quot;parallel mean: {} usec&quot;, par_mean);
 
-    let mut seq_mean: f64 = 0.0;
-    for run in 0..10 {
-        let elapsed = bench(quicksort, &amp;mut data);
-        println!(&quot;sequential {}: {}&quot;, run, elapsed);
-        seq_mean += elapsed as f64;
+    fn execute(&amp;self, job: Task) -&gt; Worker {
+        let worker = {
+            let mut workers = self.threads.lock().unwrap();
+            workers.pop()
+        };
+        match worker {
+            Some(w) =&gt; {
+                w.sender.send(job).unwrap();
+                w
+            },
+            None =&gt; panic!(&quot;No more threads!&quot;),
+        }
     }
-    seq_mean /= 10.0;
-    println!(&quot;sequential mean: {} usec&quot;, seq_mean);
 
-    println!(&quot;speedup: {}&quot;, seq_mean/par_mean);
-}</code></pre></pre>
-<p>Add some instrumentation</p>
+    pub fn wait(&amp;self, w: Worker) {
+        w.receiver.recv().expect(&amp;format!(&quot;wait {} receive error&quot;, w.id));
+
+        let mut workers = self.threads.lock().unwrap();
+        workers.push(w);
+    }
+
+    pub fn drain(&amp;self) {
+        let mut workers = self.threads.lock().unwrap();
+        while let Some(w) = workers.pop() {
+            w.sender.send(Task::Quit).expect(&amp;format!(&quot;send quit to {} failed&quot;, w.id));
+            w.thread.join().expect(&amp;format!(&quot;join with {} failed&quot;, w.id));
+        }
+    }
+<span class="boring">
+</span><span class="boring">    pub fn scoped&lt;'pool, 'scope, F, R&gt;(&amp;'pool self, f: F) -&gt; R
+</span><span class="boring">    where F: FnOnce(&amp;Scope&lt;'pool, 'scope&gt;) -&gt; R
+</span><span class="boring">    {
+</span><span class="boring">        let scope = Scope {
+</span><span class="boring">            pool: self,
+</span><span class="boring">            _marker: PhantomData,
+</span><span class="boring">        };
+</span><span class="boring">        f(&amp;scope)
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">pub struct Scope&lt;'pool, 'scope&gt; {
+</span><span class="boring">    pool: &amp;'pool ThreadPool,
+</span><span class="boring">    // The 'scope needs to be invariant... it seems?
+</span><span class="boring">    _marker: PhantomData&lt;::std::cell::Cell&lt;&amp;'scope mut ()&gt;&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl&lt;'pool, 'scope&gt; Scope&lt;'pool, 'scope&gt; {
+</span><span class="boring">    /* Execute a scoped job on the threadpool.
+</span><span class="boring">     *
+</span><span class="boring">     *The body of the closure will be sent to one of the internal threads
+</span><span class="boring">     */
+</span><span class="boring">    pub fn execute&lt;F&gt;(&amp;self, f: F) -&gt; Worker
+</span><span class="boring">    where F: FnOnce() + Send + 'scope {
+</span><span class="boring">        self.execute_(f)
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn execute_&lt;F&gt;(&amp;self, f: F) -&gt; Worker
+</span><span class="boring">    where F: FnOnce() + Send + 'scope {
+</span><span class="boring">        let b = unsafe {
+</span><span class="boring">            mem::transmute::&lt;Job&lt;'scope&gt;, Job&lt;'static&gt;&gt;(Box::new(f))
+</span><span class="boring">        };
+</span><span class="boring">        self.pool.execute(Task::Work(b))
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">type Job&lt;'a&gt; = Box&lt;dyn FnOnce() + Send + 'a&gt;;
+</span><span class="boring">
+</span><span class="boring">pub enum Task {
+</span><span class="boring">    Quit,
+</span><span class="boring">    Work(Job&lt;'static&gt;),
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">pub struct Worker {
+</span><span class="boring">    id: usize,
+</span><span class="boring">    sender: mpsc::Sender&lt;Task&gt;,
+</span><span class="boring">    receiver: mpsc::Receiver&lt;bool&gt;,
+</span><span class="boring">    thread: thread::JoinHandle&lt;()&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Worker {
+</span><span class="boring">    fn new(id: usize) -&gt; Worker {
+</span><span class="boring">        let (thread_sender, thread_receiver) = mpsc::channel(); 
+</span><span class="boring">        let (mgr_sender, mgr_receiver) = mpsc::channel(); 
+</span><span class="boring">        let thread = thread::spawn(move || {
+</span><span class="boring">            loop {
+</span><span class="boring">                let work: Task = thread_receiver.recv().unwrap();
+</span><span class="boring">                match work {
+</span><span class="boring">                    Task::Quit =&gt; {
+</span><span class="boring">                        break;
+</span><span class="boring">                    },
+</span><span class="boring">                    Task::Work(job) =&gt; {
+</span><span class="boring">                        job();
+</span><span class="boring">                    },
+</span><span class="boring">                }
+</span><span class="boring">                mgr_sender.send(true).expect(&quot;failed manager send&quot;);
+</span><span class="boring">            }
+</span><span class="boring">        });
+</span><span class="boring">
+</span><span class="boring">        Worker { id, sender: thread_sender, receiver: mgr_receiver, thread }
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">}</span></code></pre></pre>
+<p>Use the <code>scoped</code> method to pass the data partitions to the thread pool workers:
+Note that <code>THREAD_POOL</code> is now <code>Arc</code> vs <code>Mutex</code> - much cleaner!</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">use std::env;
 </span><span class="boring">use rand::Rng;
-</span><span class="boring">use std::time::Instant;
 </span><span class="boring">use std::sync::atomic::{AtomicU32, Ordering};
+</span><span class="boring">use std::sync::Arc;
+</span><span class="boring">use std::time::Instant;
 </span><span class="boring">
-</span>const MILLION: u32 = 1024*1024;
+</span><span class="boring">mod tpool;
+</span><span class="boring">
+</span><span class="boring">use tpool::ThreadPool;
+</span><span class="boring">use lazy_static::lazy_static;
+</span><span class="boring">
+</span><span class="boring">const MILLION: u32 = 256; 
+</span><span class="boring">static PAR_SEQ_THRESHOLD: AtomicU32 = AtomicU32::new(32);
+</span><span class="boring">
+</span><span class="boring">static THREAD_COUNT: AtomicU32 = AtomicU32::new(0);
+</span><span class="boring">
+</span>lazy_static! {
+    static ref THREAD_POOL: Arc&lt;ThreadPool&gt; = Arc::new(ThreadPool::new(128));
+}
 
-static THREAD_COUNT: AtomicU32 = AtomicU32::new(0);
-static PAR_SEQ_THRESHOLD: AtomicU32 = AtomicU32::new(2048);
-
-fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) {
-    if v.len() &lt;= 1 {
+fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send + std::marker::Sync&gt;(v: &amp;mut [T]) {
+    let len = v.len();
+    if len &lt;= 1 {
         return;
     }
 
-    if v.len() &lt;= PAR_SEQ_THRESHOLD.load(Ordering::SeqCst) as usize {
+    if len &lt;= PAR_SEQ_THRESHOLD.load(Ordering::SeqCst) as usize {
         quicksort(v);
         return;
     }
 
+    let mid = partition(v);
+    let (lo, hi) = v.split_at_mut(mid);
+
     THREAD_COUNT.fetch_add(2, Ordering::SeqCst);
-    
-    crossbeam::scope(|scope| {
-        let mid = partition(v);
-        let (lo, hi) = v.split_at_mut(mid);
-        scope.spawn(move |_| parallel_quicksort(lo));
-        scope.spawn(move |_| parallel_quicksort(hi));
-    }).expect(&quot;thread spawn failed&quot;);
+
+    let pool = Arc::clone(&amp;THREAD_POOL);
+    let w1 = pool.scoped(|s| {
+        s.execute(move || { parallel_quicksort(lo); })
+    });
+    let w2 = pool.scoped(|s| {
+        s.execute(move || { parallel_quicksort(hi); })
+    });
+
+    pool.wait(w1);
+    pool.wait(w2);
 }
 <span class="boring">
 </span><span class="boring">fn quicksort&lt;T: PartialOrd&gt;(v: &amp;mut [T]) {
@@ -439,21 +593,20 @@ fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) 
 </span><span class="boring">    seq_mean /= 10.0;
 </span><span class="boring">    println!(&quot;sequential mean: {} usec&quot;, seq_mean);
 </span><span class="boring">    
-</span><span class="boring">
 </span><span class="boring">    println!(&quot;speedup: {}&quot;, seq_mean/par_mean);
+</span><span class="boring">
+</span><span class="boring">    let pool = Arc::clone(&amp;THREAD_POOL);
+</span><span class="boring">    pool.drain();
 </span><span class="boring">}</span></code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="quicksort.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="pools.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="pools.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -461,13 +614,10 @@ fn parallel_quicksort&lt;T: PartialOrd + std::marker::Send&gt;(v: &amp;mut [T]) 
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="quicksort.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="pools.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="pools.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
             </nav>
 
         </div>
