@@ -1,0 +1,1100 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Kernel Modules</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html"><strong aria-hidden="true">3.</strong> Preparing you System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Kernel Modules</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="kernel-modules"><a class="header" href="#kernel-modules">Kernel Modules</a></h1>
+<p>A kernel module is like a dynamically linked library for the kernel.
+Modules can be loaded and unloaded while the OS is running, and they can also
+be built into the kernel image (like a statically linked library).</p>
+<p>Device drivers are popular to write as modules. They allow a generic kernel to
+run on many different hardware configurations by dynamically loading only the
+modules for the devices on the particular machine the kernel is running on.</p>
+<h3 id="tools-for-working-with-modules"><a class="header" href="#tools-for-working-with-modules">Tools for working with Modules</a></h3>
+<p>Modules are so important that most OSes provide lots of tools for working with
+them.</p>
+<ul>
+<li><a href="https://linux.die.net/man/8/lsmod">lsmod</a> - lists the installed modules</li>
+</ul>
+<pre><code class="language-console">root@ubuntu:/home/ubuntu# lsmod
+Module                  Size  Used by
+snd_hda_codec_generic   102400  1
+ledtrig_audio          16384  1 snd_hda_codec_generic
+nls_iso8859_1          16384  1
+snd_hda_intel          53248  3
+snd_intel_dspcfg       20480  1 snd_hda_intel
+snd_hda_codec         176128  2 snd_hda_codec_generic,snd_hda_intel
+snd_hda_core          126976  3 snd_hda_codec_generic,snd_hda_intel,snd_hda_codec
+snd_hwdep              24576  1 snd_hda_codec
+snd_pcm               159744  3 snd_hda_intel,snd_hda_codec,snd_hda_core
+snd_seq_midi           20480  0
+snd_seq_midi_event     24576  1 snd_seq_midi
+snd_rawmidi            53248  1 snd_seq_midi
+snd_seq                98304  2 snd_seq_midi,snd_seq_midi_event
+snd_seq_device         20480  3 snd_seq,snd_seq_midi,snd_rawmidi
+uas                    28672  0
+snd_timer              45056  2 snd_seq,snd_pcm
+input_leds             16384  0
+usb_storage            81920  1 uas
+joydev                 36864  0
+snd                   126976  15 snd_hda_codec_generic,snd_seq,snd_seq_device,snd_hwdep,snd_hda_intel,snd_hda_codec,snd_timer,snd_pcm,snd_rawmidi
+soundcore              20480  1 snd
+qemu_fw_cfg            24576  0
+</code></pre>
+<ul>
+<li><a href="https://linux.die.net/man/8/modinfo">modinfo</a> - shows information about a module</li>
+</ul>
+<pre><code class="language-console">root@ubuntu:/home/ubuntu# lsmod
+Module                  Size  Used by
+snd_hda_codec_generic   102400  1
+ledtrig_audio          16384  1 snd_hda_codec_generic
+nls_iso8859_1          16384  1
+snd_hda_intel          53248  3
+snd_intel_dspcfg       20480  1 snd_hda_intel
+snd_hda_codec         176128  2 snd_hda_codec_generic,snd_hda_intel
+snd_hda_core          126976  3 snd_hda_codec_generic,snd_hda_intel,snd_hda_codec
+snd_hwdep              24576  1 snd_hda_codec
+snd_pcm               159744  3 snd_hda_intel,snd_hda_codec,snd_hda_core
+snd_seq_midi           20480  0
+snd_seq_midi_event     24576  1 snd_seq_midi
+snd_rawmidi            53248  1 snd_seq_midi
+snd_seq                98304  2 snd_seq_midi,snd_seq_midi_event
+snd_seq_device         20480  3 snd_seq,snd_seq_midi,snd_rawmidi
+uas                    28672  0
+snd_timer              45056  2 snd_seq,snd_pcm
+input_leds             16384  0
+usb_storage            81920  1 uas
+joydev                 36864  0
+snd                   126976  15 snd_hda_codec_generic,snd_seq,snd_seq_device,snd_hwdep,snd_hda_intel,snd_hda_codec,snd_timer,snd_pcm,snd_rawmidi
+soundcore              20480  1 snd
+qemu_fw_cfg            24576  0
+</code></pre>
+<ul>
+<li>
+<p><a href="https://linux.die.net/man/8/insmod">insmod</a>/<a href="https://linux.die.net/man/8/rmmod">rmmod</a> - insert and remove a module from a running kernel</p>
+</li>
+<li>
+<p><a href="https://linux.die.net/man/8/modprobe">modprobe</a> - a more intelligent tool to insert and remove modules. <code>modprobe</code> can search for a module given a name, and will automatically load any prerequisite modules that the module depends on.</p>
+</li>
+<li>
+<p><a href="https://www.kernel.org/doc/html/v4.15/admin-guide/module-signing.html">signing</a> - most systems require superuser privileges to insert and remove modules. Most systems also require that modules are cryptographically signed.</p>
+</li>
+</ul>
+<p>On MacOs, modules are called <em>kernel extensions</em> (kexts). MacOs also provides
+a tools to work with its modules: <a href="https://www.unix.com/man-page/osx/8/kextutil/">kextutil</a>, <a href="https://www.unix.com/man-page/osx/8/kextstat/">kextstat</a>, etc.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="linux-devices"><a class="header" href="#linux-devices">Linux Devices</a></h1>
+<p>In Linux, a device referes to any physical or virtual entity that provides
+specific functionality<sup class="footnote-reference"><a href="#1">1</a></sup>. Since everything in Unix is a file, devices are
+represented by special files in the <code>/dev</code> directory.</p>
+<p>There are two main types of devices, block and character, but there are several
+distinct categories of devices within Linux (not necessarily Unix):</p>
+<ul>
+<li><em>Block</em> devices store and retrieve data in fixed sized blocks, and are often random access</li>
+<li><em>Character</em> devices send or receive a stream of bytes to some peripheral</li>
+<li><em>Network</em> devices are somewhat of a cross between block and char devices, in that they send and receive fixed sized streams of blocks.</li>
+<li><em>Video Adapters</em> are also a bit of a hybrid, in that a frame buffer is conceptually random access but the pixels are typically streamed as scan lines.</li>
+<li><em>Pseudo-devices</em> - do not correspond to physical hardware, and are not even
+required to do I/O</li>
+</ul>
+<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
+<p>https://issuu.com/cromacampustraining/docs/12_what_is_a_linux_device/s/23539762</p>
+</div>
+<h3 id="tools-to-work-with-devices"><a class="header" href="#tools-to-work-with-devices">Tools to work with Devices</a></h3>
+<ul>
+<li><a href="https://linux.die.net/man/8/lspci">lspci</a> lists PCI devices in the system</li>
+</ul>
+<pre><code class="language-console">root@ubuntu:/home/ubuntu# lspci
+00:00.0 Host bridge: Red Hat, Inc. QEMU PCIe Host bridge
+00:01.0 Ethernet controller: Red Hat, Inc. Virtio network device
+00:02.0 Display controller: Red Hat, Inc. Virtio GPU (rev 01)
+00:03.0 Audio device: Intel Corporation 82801FB/FBM/FR/FW/FRW (ICH6 Family) High Definition Audio Controller (rev 01)
+00:04.0 USB controller: NEC Corporation uPD720200 USB 3.0 Host Controller (rev 03)
+00:05.0 USB controller: Red Hat, Inc. QEMU XHCI Host Controller (rev 01)
+00:06.0 SCSI storage controller: Red Hat, Inc. Virtio block device
+00:07.0 Communication controller: Red Hat, Inc. Virtio console
+00:08.0 Unclassified device [00ff]: Red Hat, Inc. Virtio RNG
+root@ubuntu:/home/ubuntu# lspci -vvv -s 00:01.0
+00:01.0 Ethernet controller: Red Hat, Inc. Virtio network device
+	Subsystem: Red Hat, Inc. Virtio network device
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast &gt;TAbort- &lt;TAbort- &lt;MAbort- &gt;SERR- &lt;PERR- INTx-
+	Latency: 0
+	Interrupt: pin A routed to IRQ 46
+	Region 0: I/O ports at 10c0 [size=32]
+	Region 1: Memory at 10044000 (32-bit, non-prefetchable) [size=4K]
+	Region 4: Memory at 8000000000 (64-bit, prefetchable) [size=16K]
+	Expansion ROM at 10000000 [disabled] [size=256K]
+	Capabilities: [98] MSI-X: Enable+ Count=4 Masked-
+		Vector table: BAR=1 offset=00000000
+		PBA: BAR=1 offset=00000800
+	Capabilities: [84] Vendor Specific Information: VirtIO: &lt;unknown&gt;
+		BAR=0 offset=00000000 size=00000000
+	Capabilities: [70] Vendor Specific Information: VirtIO: Notify
+		BAR=4 offset=00003000 size=00001000 multiplier=00000004
+	Capabilities: [60] Vendor Specific Information: VirtIO: DeviceCfg
+		BAR=4 offset=00002000 size=00001000
+	Capabilities: [50] Vendor Specific Information: VirtIO: ISR
+		BAR=4 offset=00001000 size=00001000
+	Capabilities: [40] Vendor Specific Information: VirtIO: CommonCfg
+		BAR=4 offset=00000000 size=00001000
+	Kernel driver in use: virtio-pci
+</code></pre>
+<ul>
+<li><a href="https://www.man7.org/linux/man-pages/man5/sysfs.5.html">sysfs</a> - a pseudo-filesystem which provides an interface to kernel data structures. Similar (and more official than) <a href="https://www.man7.org/linux/man-pages/man5/proc.5.html">procfs</a></li>
+</ul>
+<pre><code class="language-console">ubuntu@ubuntu:/sys/bus/pci$ ls devices/0000\:00\:01.0
+ari_enabled               d3cold_allowed  driver_override  local_cpus  power        resource0     rom               vendor
+broken_parity_status      device          enable           modalias    power_state  resource1     subsystem         virtio0
+class                     devspec         irq              msi_bus     remove       resource4     subsystem_device
+config                    dma_mask_bits   link             msi_irqs    rescan       resource4_wc  subsystem_vendor
+consistent_dma_mask_bits  driver          local_cpulist    numa_node   resource     revision      uevent
+</code></pre>
+<ul>
+<li><a href="https://linux.die.net/man/8/lsusb">lsusb</a> - lists USB information</li>
+</ul>
+<pre><code class="language-console">ubuntu@ubuntu:~$ lsusb
+Bus 004 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 001 Device 006: ID 46f4:0001 QEMU QEMU USB HARDDRIVE
+Bus 001 Device 005: ID 0409:55aa NEC Corp. Hub
+Bus 001 Device 004: ID 0627:0001 Adomax Technology Co., Ltd QEMU USB Keyboard
+Bus 001 Device 003: ID 0627:0001 Adomax Technology Co., Ltd QEMU USB Mouse
+Bus 001 Device 002: ID 0627:0001 Adomax Technology Co., Ltd QEMU USB Tablet
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+</code></pre>
+<ul>
+<li>
+<p><a href="https://linux.die.net/man/8/dmidecode">dmidecode</a> - dumps the Device Management Interface (DMI) table</p>
+</li>
+<li>
+<p><a href="https://linux.die.net/man/1/lshw">lshw</a>/<a href="https://linux.die.net/man/8/lsdev">lsdev</a> - list hardware/devices</p>
+</li>
+</ul>
+<p>On MacOS you can use <a href="https://www.unix.com/man-page/osx/8/ioreg/">ioreg</a> or the
+<a href="https://support.apple.com/en-ca/guide/system-information/syspr35536/mac">System Report</a></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="preparing-your-system"><a class="header" href="#preparing-your-system">Preparing your System</a></h1>
+<p>Most Linux systems come ready to run, and are not ready for kernel development
+out of the box.</p>
+<p>The first step is to install the development tools</p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install build-essential ncurses-dev xz-utils libelf-dev bison flex libssl-dev fakeroot 
+</code></pre>
+<p>You can [build an entire new kernel](https://wiki.ubuntu.com/Kernel/BuildYourOwnKernel#:~:text=The%20source%20code%20which%20generated,%2Dunsigned%2D%24(uname%20%2Dr) for your modules to link against, or you can build out-of-tree modules
+that link against the running kernel.</p>
+<pre><code class="language-bash">sudo apt build-dep linux linux-image-unsigned-$(uname -r)
+</code></pre>
+<pre><code class="language-console">ubuntu@ubuntu:~$ uname -a
+Linux ubuntu 5.15.0-100-generic #110-Ubuntu SMP Wed Feb 7 13:28:04 UTC 2024 aarch64 aarch64 aarch64 GNU/Linux
+ubuntu@ubuntu:~$ uname -r
+5.15.0-100-generic
+ubuntu@ubuntu:~$ cat /etc/issue
+Ubuntu 22.04.3 LTS \n \l
+</code></pre>
+<p>You will likely be asked to add some <code>deb-src</code> lines to <code>etc/apt/sources.list</code>.
+You can add them by uncommenting the ones that are already in the file - just
+be sure to rerun '<code>sudo apt update</code> afterwards.</p>
+<p>To build the kernel you can generally just <code>cd</code> into the source directory and
+type <code>make</code>. If you want to see what configuration you're building, you can
+type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</code></a>:</p>
+<img src="img/menuconfig.jpg" alt="make menuconfig"><div style="break-before: page; page-break-before: always;"></div><h1 id="hello-world"><a class="header" href="#hello-world">Hello World</a></h1>
+<p>As a dynamically linked library, the module has to export some well-know
+symbols to <code>insmod</code> so the loader can relocate and resolve them. The loader will
+also have to resolve external kernel symbols the module imports.
+About the simplest module you can have is:</p>
+<pre><code class="language-c">#include &lt;linux/module.h&gt;
+#include &lt;linux/kernel.h&gt;
+
+MODULE_LICENSE(&quot;GPL&quot;);
+
+int init_module(void) {
+    printk(KERN_INFO &quot;Simplest hello world\n&quot;);
+    return 0;
+}
+
+void cleanup_module(void) {
+    printk(KERN_INFO &quot;Simplest goodbye world\n&quot;);
+}
+</code></pre>
+<p>The magic Makefile to build it is:</p>
+<pre><code class="language-make">ubuntu@ubuntu:~/src/modules/hello-1$ cat Makefile
+obj-m += hello1.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+</code></pre>
+<p>and the result is</p>
+<pre><code class="language-console">ubuntu@ubuntu:~/src/modules/hello-1$ sudo insmod ./hello1.ko
+[sudo] password for ubuntu: 
+ubuntu@ubuntu:~/src/modules/hello-1$ lsmod | grep hello
+hello1                 16384  0
+ubuntu@ubuntu:~/src/modules/hello-1$ sudo dmesg
+...
+[15450.118167] hello1: loading out-of-tree module taints kernel.
+[15450.118725] hello1: module verification failed: signature and/or required key missing - tainting kernel
+[15450.120706] Simplest hello world
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="module-licensing-and-documentation"><a class="header" href="#module-licensing-and-documentation">Module Licensing and Documentation</a></h1>
+<pre><code class="language-c">/*  
+ *  hello3.c - Illustrating the __init, __initdata and __exit macros.
+ */
+#include &lt;linux/module.h&gt;	/* Needed by all modules */
+#include &lt;linux/kernel.h&gt;	/* Needed for KERN_INFO */
+#include &lt;linux/init.h&gt;		/* Needed for the macros */
+
+static int hello3_data __initdata = 3;
+
+static int __init hello_3_init(void)
+{
+	printk(KERN_INFO &quot;Hello, world %d\n&quot;, hello3_data);
+	return 0;
+}
+
+static void __exit hello_3_exit(void)
+{
+	printk(KERN_INFO &quot;Goodbye, world 3\n&quot;);
+}
+
+module_init(hello_3_init);
+module_exit(hello_3_exit);
+
+MODULE_LICENSE(&quot;GPL&quot;);
+
+MODULE_AUTHOR(&quot;Linux Kernel Module Programming Guide&quot;);
+MODULE_DESCRIPTION(&quot;Sample documented driver&quot;);
+</code></pre>
+<p>And now <code>modinfo</code> shows:</p>
+<pre><code class="language-console">ubuntu@ubuntu:~/src/modules/hello-1$ modinfo ./hello4.ko
+filename:       /home/ubuntu/src/modules/hello-1/./hello4.ko
+description:    Sample documented driver
+author:         Linux Kernel Module Programming Guide
+license:        GPL
+srcversion:     005A23BAEAE98627650C686
+depends:        
+name:           hello4
+vermagic:       5.15.0-100-generic SMP mod_unload modversions aarch64
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="character-devices"><a class="header" href="#character-devices">Character Devices</a></h1>
+<p>A device driver needs to support the standard operations such as <code>open</code>, <code>read</code>,
+<code>write</code>, etc. These operations are defined by the <code>file_operations</code> struct in
+linux/fs.h</p>
+<pre><code class="language-c">struct file_operations {
+        struct module *owner;
+        loff_t (*llseek) (struct file *, loff_t, int);
+        ssize_t (*read) (struct file *, char __user *, size_t, loff_t *);
+        ssize_t (*write) (struct file *, const char __user *, size_t, loff_t *);
+        ssize_t (*read_iter) (struct kiocb *, struct iov_iter *);
+        ssize_t (*write_iter) (struct kiocb *, struct iov_iter *);
+        int (*iopoll)(struct kiocb *kiocb, bool spin);
+        int (*iterate) (struct file *, struct dir_context *);
+        int (*iterate_shared) (struct file *, struct dir_context *);
+        __poll_t (*poll) (struct file *, struct poll_table_struct *);
+        long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long);
+        long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
+        int (*mmap) (struct file *, struct vm_area_struct *);
+        unsigned long mmap_supported_flags;
+        int (*open) (struct inode *, struct file *);
+        int (*flush) (struct file *, fl_owner_t id);
+        int (*release) (struct inode *, struct file *);
+        int (*fsync) (struct file *, loff_t, loff_t, int datasync);
+        int (*fasync) (int, struct file *, int);
+        int (*lock) (struct file *, int, struct file_lock *);
+        ssize_t (*sendpage) (struct file *, struct page *, int, size_t, loff_t *, int);
+        unsigned long (*get_unmapped_area)(struct file *, unsigned long, unsigned long, unsigned long, unsigned long);
+        int (*check_flags)(int);
+        int (*setfl)(struct file *, unsigned long);
+        int (*flock) (struct file *, int, struct file_lock *);
+        ssize_t (*splice_write)(struct pipe_inode_info *, struct file *, loff_t *, size_t, unsigned int);
+        ssize_t (*splice_read)(struct file *, loff_t *, struct pipe_inode_info *, size_t, unsigned int);
+        int (*setlease)(struct file *, long, struct file_lock **, void **);
+        long (*fallocate)(struct file *file, int mode, loff_t offset,
+                          loff_t len);
+        void (*show_fdinfo)(struct seq_file *m, struct file *f);
+#ifndef CONFIG_MMU
+        unsigned (*mmap_capabilities)(struct file *);
+#endif
+        ssize_t (*copy_file_range)(struct file *, loff_t, struct file *,
+                        loff_t, size_t, unsigned int);
+        loff_t (*remap_file_range)(struct file *file_in, loff_t pos_in,
+                                   struct file *file_out, loff_t pos_out,
+                                   loff_t len, unsigned int remap_flags);
+        int (*fadvise)(struct file *, loff_t, loff_t, int);
+} __randomize_layout;
+</code></pre>
+<p>The <code>struct file*</code> refers to the device's file, which is created with the
+<a href="https://linux.die.net/man/1/mknod">mknod</a> command:</p>
+<pre><code class="language-bash">root# mknod /dev/chardev c 510 0
+</code></pre>
+<p>The driver associates itself with the device file by registering as a
+character device:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">/*
+</span><span class="boring"> *  chardev.c: Creates a read-only char device that says how many times
+</span><span class="boring"> *  you've read from the dev file
+</span><span class="boring"> */
+</span><span class="boring">
+</span><span class="boring">#include &lt;linux/kernel.h&gt;
+</span><span class="boring">#include &lt;linux/module.h&gt;
+</span><span class="boring">#include &lt;linux/fs.h&gt;
+</span><span class="boring">#include &lt;asm/uaccess.h&gt;	/* for put_user */
+</span><span class="boring">
+</span><span class="boring">/*  
+</span><span class="boring"> *  Prototypes - this would normally go in a .h file
+</span><span class="boring"> */
+</span><span class="boring">int init_module(void);
+</span><span class="boring">void cleanup_module(void);
+</span><span class="boring">static int device_open(struct inode *, struct file *);
+</span><span class="boring">static int device_release(struct inode *, struct file *);
+</span><span class="boring">static ssize_t device_read(struct file *, char *, size_t, loff_t *);
+</span><span class="boring">static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
+</span><span class="boring">
+</span><span class="boring">#define SUCCESS 0
+</span><span class="boring">#define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
+</span><span class="boring">#define BUF_LEN 80		/* Max length of the message from the device */
+</span><span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Global variables are declared as static, so are global within the file. 
+</span><span class="boring"> */
+</span><span class="boring">
+</span><span class="boring">static int Major;		/* Major number assigned to our device driver */
+</span><span class="boring">static int Device_Open = 0;	/* Is device open?  
+</span><span class="boring">				 * Used to prevent multiple access to device */
+</span><span class="boring">static char msg[BUF_LEN];	/* The msg the device will give when asked */
+</span><span class="boring">static char *msg_Ptr;
+</span><span class="boring">
+</span>static struct file_operations fops = {
+	.read = device_read,
+	.write = device_write,
+	.open = device_open,
+	.release = device_release
+};
+
+/*
+ * This function is called when the module is loaded
+ */
+int init_module(void)
+{
+    Major = register_chrdev(0, DEVICE_NAME, &amp;fops);
+<span class="boring">	if (Major &lt; 0) {
+</span><span class="boring">	  printk(KERN_ALERT &quot;Registering char device failed with %d\n&quot;, Major);
+</span><span class="boring">	  return Major;
+</span><span class="boring">	}
+</span><span class="boring">
+</span><span class="boring">	printk(KERN_INFO &quot;I was assigned major number %d. To talk to\n&quot;, Major);
+</span><span class="boring">	printk(KERN_INFO &quot;the driver, create a dev file with\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;'mknod /dev/%s c %d 0'.\n&quot;, DEVICE_NAME, Major);
+</span><span class="boring">	printk(KERN_INFO &quot;Try various minor numbers. Try to cat and echo to\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;the device file.\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;Remove the device file and module when done.\n&quot;);
+</span><span class="boring">
+</span><span class="boring">	return SUCCESS;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/*
+</span><span class="boring"> * This function is called when the module is unloaded
+</span><span class="boring"> */
+</span><span class="boring">void cleanup_module(void)
+</span><span class="boring">{
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Unregister the device 
+</span><span class="boring">	 */
+</span><span class="boring">	unregister_chrdev(Major, DEVICE_NAME);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/*
+</span><span class="boring"> * Methods
+</span><span class="boring"> */
+</span><span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Called when a process tries to open the device file, like
+</span><span class="boring"> * &quot;cat /dev/mycharfile&quot;
+</span><span class="boring"> */
+</span><span class="boring">static int device_open(struct inode *inode, struct file *file)
+</span><span class="boring">{
+</span><span class="boring">	static int counter = 0;
+</span><span class="boring">
+</span><span class="boring">	if (Device_Open)
+</span><span class="boring">		return -EBUSY;
+</span><span class="boring">
+</span><span class="boring">	Device_Open++;
+</span><span class="boring">	sprintf(msg, &quot;I already told you %d times Hello world!\n&quot;, counter++);
+</span><span class="boring">	msg_Ptr = msg;
+</span><span class="boring">	try_module_get(THIS_MODULE);
+</span><span class="boring">
+</span><span class="boring">	return SUCCESS;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Called when a process closes the device file.
+</span><span class="boring"> */
+</span><span class="boring">static int device_release(struct inode *inode, struct file *file)
+</span><span class="boring">{
+</span><span class="boring">	Device_Open--;		/* We're now ready for our next caller */
+</span><span class="boring">
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Decrement the usage count, or else once you opened the file, you'll
+</span><span class="boring">	 * never get get rid of the module. 
+</span><span class="boring">	 */
+</span><span class="boring">	module_put(THIS_MODULE);
+</span><span class="boring">
+</span><span class="boring">	return 0;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Called when a process, which already opened the dev file, attempts to
+</span><span class="boring"> * read from it.
+</span><span class="boring"> */
+</span><span class="boring">static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
+</span><span class="boring">			   char *buffer,	/* buffer to fill with data */
+</span><span class="boring">			   size_t length,	/* length of the buffer     */
+</span><span class="boring">			   loff_t * offset)
+</span><span class="boring">{
+</span><span class="boring">	/*
+</span><span class="boring">	 * Number of bytes actually written to the buffer 
+</span><span class="boring">	 */
+</span><span class="boring">	int bytes_read = 0;
+</span><span class="boring">
+</span><span class="boring">	/*
+</span><span class="boring">	 * If we're at the end of the message, 
+</span><span class="boring">	 * return 0 signifying end of file 
+</span><span class="boring">	 */
+</span><span class="boring">	if (*msg_Ptr == 0)
+</span><span class="boring">		return 0;
+</span><span class="boring">
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Actually put the data into the buffer 
+</span><span class="boring">	 */
+</span><span class="boring">	while (length &amp;&amp; *msg_Ptr) {
+</span><span class="boring">
+</span><span class="boring">		/* 
+</span><span class="boring">		 * The buffer is in the user data segment, not the kernel 
+</span><span class="boring">		 * segment so &quot;*&quot; assignment won't work.  We have to use 
+</span><span class="boring">		 * put_user which copies data from the kernel data segment to
+</span><span class="boring">		 * the user data segment. 
+</span><span class="boring">		 */
+</span><span class="boring">		put_user(*(msg_Ptr++), buffer++);
+</span><span class="boring">
+</span><span class="boring">		length--;
+</span><span class="boring">		bytes_read++;
+</span><span class="boring">	}
+</span><span class="boring">
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Most read functions return the number of bytes put into the buffer
+</span><span class="boring">	 */
+</span><span class="boring">	return bytes_read;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/*  
+</span><span class="boring"> * Called when a process writes to dev file: echo &quot;hi&quot; &gt; /dev/hello 
+</span><span class="boring"> */
+</span><span class="boring">static ssize_t
+</span><span class="boring">device_write(struct file *filp, const char *buff, size_t len, loff_t * off)
+</span><span class="boring">{
+</span><span class="boring">	printk(KERN_ALERT &quot;Sorry, this operation isn't supported.\n&quot;);
+</span><span class="boring">	return -EINVAL;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">MODULE_LICENSE(&quot;GPL&quot;);
+</span><span class="boring">
+</span><span class="boring">MODULE_AUTHOR(&quot;Linux Kernel Module Programming Guide&quot;);
+</span><span class="boring">MODULE_DESCRIPTION(&quot;Sample character device driver&quot;);
+</span><span class="boring">}</span></code></pre></pre>
+<p>When the device is opened, it uses <code>try_module_get</code> to bump a reference count
+that is used by the OS to prevent an untimely <code>rmmod</code>. Note that this particular
+driver only allows a single <code>open</code> at a time.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">/*
+</span><span class="boring"> *  chardev.c: Creates a read-only char device that says how many times
+</span><span class="boring"> *  you've read from the dev file
+</span><span class="boring"> */
+</span><span class="boring">
+</span><span class="boring">#include &lt;linux/kernel.h&gt;
+</span><span class="boring">#include &lt;linux/module.h&gt;
+</span><span class="boring">#include &lt;linux/fs.h&gt;
+</span><span class="boring">#include &lt;asm/uaccess.h&gt;	/* for put_user */
+</span><span class="boring">
+</span><span class="boring">/*  
+</span><span class="boring"> *  Prototypes - this would normally go in a .h file
+</span><span class="boring"> */
+</span><span class="boring">int init_module(void);
+</span><span class="boring">void cleanup_module(void);
+</span><span class="boring">static int device_open(struct inode *, struct file *);
+</span><span class="boring">static int device_release(struct inode *, struct file *);
+</span><span class="boring">static ssize_t device_read(struct file *, char *, size_t, loff_t *);
+</span><span class="boring">static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
+</span><span class="boring">
+</span><span class="boring">#define SUCCESS 0
+</span><span class="boring">#define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
+</span><span class="boring">#define BUF_LEN 80		/* Max length of the message from the device */
+</span><span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Global variables are declared as static, so are global within the file. 
+</span><span class="boring"> */
+</span><span class="boring">
+</span><span class="boring">static int Major;		/* Major number assigned to our device driver */
+</span><span class="boring">static int Device_Open = 0;	/* Is device open?  
+</span><span class="boring">				 * Used to prevent multiple access to device */
+</span><span class="boring">static char msg[BUF_LEN];	/* The msg the device will give when asked */
+</span><span class="boring">static char *msg_Ptr;
+</span><span class="boring">
+</span><span class="boring">static struct file_operations fops = {
+</span><span class="boring">	.read = device_read,
+</span><span class="boring">	.write = device_write,
+</span><span class="boring">	.open = device_open,
+</span><span class="boring">	.release = device_release
+</span><span class="boring">};
+</span><span class="boring">
+</span><span class="boring">/*
+</span><span class="boring"> * This function is called when the module is loaded
+</span><span class="boring"> */
+</span><span class="boring">int init_module(void)
+</span><span class="boring">{
+</span><span class="boring">    Major = register_chrdev(0, DEVICE_NAME, &amp;fops);
+</span><span class="boring">	if (Major &lt; 0) {
+</span><span class="boring">	  printk(KERN_ALERT &quot;Registering char device failed with %d\n&quot;, Major);
+</span><span class="boring">	  return Major;
+</span><span class="boring">	}
+</span><span class="boring">
+</span><span class="boring">	printk(KERN_INFO &quot;I was assigned major number %d. To talk to\n&quot;, Major);
+</span><span class="boring">	printk(KERN_INFO &quot;the driver, create a dev file with\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;'mknod /dev/%s c %d 0'.\n&quot;, DEVICE_NAME, Major);
+</span><span class="boring">	printk(KERN_INFO &quot;Try various minor numbers. Try to cat and echo to\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;the device file.\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;Remove the device file and module when done.\n&quot;);
+</span><span class="boring">
+</span><span class="boring">	return SUCCESS;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/*
+</span><span class="boring"> * This function is called when the module is unloaded
+</span><span class="boring"> */
+</span><span class="boring">void cleanup_module(void)
+</span><span class="boring">{
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Unregister the device 
+</span><span class="boring">	 */
+</span><span class="boring">	unregister_chrdev(Major, DEVICE_NAME);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/*
+</span><span class="boring"> * Methods
+</span><span class="boring"> */
+</span><span class="boring">
+</span>/* 
+ * Called when a process tries to open the device file, like
+ * &quot;cat /dev/mycharfile&quot;
+ */
+static int device_open(struct inode *inode, struct file *file)
+{
+	static int counter = 0;
+
+	if (Device_Open)
+		return -EBUSY;
+
+	Device_Open++;
+	sprintf(msg, &quot;I already told you %d times Hello world!\n&quot;, counter++);
+	msg_Ptr = msg;
+	try_module_get(THIS_MODULE);
+
+	return SUCCESS;
+}
+
+/* 
+ * Called when a process closes the device file.
+ */
+static int device_release(struct inode *inode, struct file *file)
+{
+	Device_Open--;		/* We're now ready for our next caller */
+
+	/* 
+	 * Decrement the usage count, or else once you opened the file, you'll
+	 * never get get rid of the module. 
+	 */
+	module_put(THIS_MODULE);
+
+	return 0;
+}
+<span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Called when a process, which already opened the dev file, attempts to
+</span><span class="boring"> * read from it.
+</span><span class="boring"> */
+</span><span class="boring">static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
+</span><span class="boring">			   char *buffer,	/* buffer to fill with data */
+</span><span class="boring">			   size_t length,	/* length of the buffer     */
+</span><span class="boring">			   loff_t * offset)
+</span><span class="boring">{
+</span><span class="boring">	/*
+</span><span class="boring">	 * Number of bytes actually written to the buffer 
+</span><span class="boring">	 */
+</span><span class="boring">	int bytes_read = 0;
+</span><span class="boring">
+</span><span class="boring">	/*
+</span><span class="boring">	 * If we're at the end of the message, 
+</span><span class="boring">	 * return 0 signifying end of file 
+</span><span class="boring">	 */
+</span><span class="boring">	if (*msg_Ptr == 0)
+</span><span class="boring">		return 0;
+</span><span class="boring">
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Actually put the data into the buffer 
+</span><span class="boring">	 */
+</span><span class="boring">	while (length &amp;&amp; *msg_Ptr) {
+</span><span class="boring">
+</span><span class="boring">		/* 
+</span><span class="boring">		 * The buffer is in the user data segment, not the kernel 
+</span><span class="boring">		 * segment so &quot;*&quot; assignment won't work.  We have to use 
+</span><span class="boring">		 * put_user which copies data from the kernel data segment to
+</span><span class="boring">		 * the user data segment. 
+</span><span class="boring">		 */
+</span><span class="boring">		put_user(*(msg_Ptr++), buffer++);
+</span><span class="boring">
+</span><span class="boring">		length--;
+</span><span class="boring">		bytes_read++;
+</span><span class="boring">	}
+</span><span class="boring">
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Most read functions return the number of bytes put into the buffer
+</span><span class="boring">	 */
+</span><span class="boring">	return bytes_read;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/*  
+</span><span class="boring"> * Called when a process writes to dev file: echo &quot;hi&quot; &gt; /dev/hello 
+</span><span class="boring"> */
+</span><span class="boring">static ssize_t
+</span><span class="boring">device_write(struct file *filp, const char *buff, size_t len, loff_t * off)
+</span><span class="boring">{
+</span><span class="boring">	printk(KERN_ALERT &quot;Sorry, this operation isn't supported.\n&quot;);
+</span><span class="boring">	return -EINVAL;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">MODULE_LICENSE(&quot;GPL&quot;);
+</span><span class="boring">
+</span><span class="boring">MODULE_AUTHOR(&quot;Linux Kernel Module Programming Guide&quot;);
+</span><span class="boring">MODULE_DESCRIPTION(&quot;Sample character device driver&quot;);
+</span><span class="boring">}</span></code></pre></pre>
+<p>On a <code>read</code> the bytes have to be copied from kernel space to user space:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">/*
+</span><span class="boring"> *  chardev.c: Creates a read-only char device that says how many times
+</span><span class="boring"> *  you've read from the dev file
+</span><span class="boring"> */
+</span><span class="boring">
+</span><span class="boring">#include &lt;linux/kernel.h&gt;
+</span><span class="boring">#include &lt;linux/module.h&gt;
+</span><span class="boring">#include &lt;linux/fs.h&gt;
+</span><span class="boring">#include &lt;asm/uaccess.h&gt;	/* for put_user */
+</span><span class="boring">
+</span><span class="boring">/*  
+</span><span class="boring"> *  Prototypes - this would normally go in a .h file
+</span><span class="boring"> */
+</span><span class="boring">int init_module(void);
+</span><span class="boring">void cleanup_module(void);
+</span><span class="boring">static int device_open(struct inode *, struct file *);
+</span><span class="boring">static int device_release(struct inode *, struct file *);
+</span><span class="boring">static ssize_t device_read(struct file *, char *, size_t, loff_t *);
+</span><span class="boring">static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
+</span><span class="boring">
+</span><span class="boring">#define SUCCESS 0
+</span><span class="boring">#define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
+</span><span class="boring">#define BUF_LEN 80		/* Max length of the message from the device */
+</span><span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Global variables are declared as static, so are global within the file. 
+</span><span class="boring"> */
+</span><span class="boring">
+</span><span class="boring">static int Major;		/* Major number assigned to our device driver */
+</span><span class="boring">static int Device_Open = 0;	/* Is device open?  
+</span><span class="boring">				 * Used to prevent multiple access to device */
+</span><span class="boring">static char msg[BUF_LEN];	/* The msg the device will give when asked */
+</span><span class="boring">static char *msg_Ptr;
+</span><span class="boring">
+</span><span class="boring">static struct file_operations fops = {
+</span><span class="boring">	.read = device_read,
+</span><span class="boring">	.write = device_write,
+</span><span class="boring">	.open = device_open,
+</span><span class="boring">	.release = device_release
+</span><span class="boring">};
+</span><span class="boring">
+</span><span class="boring">/*
+</span><span class="boring"> * This function is called when the module is loaded
+</span><span class="boring"> */
+</span><span class="boring">int init_module(void)
+</span><span class="boring">{
+</span><span class="boring">    Major = register_chrdev(0, DEVICE_NAME, &amp;fops);
+</span><span class="boring">	if (Major &lt; 0) {
+</span><span class="boring">	  printk(KERN_ALERT &quot;Registering char device failed with %d\n&quot;, Major);
+</span><span class="boring">	  return Major;
+</span><span class="boring">	}
+</span><span class="boring">
+</span><span class="boring">	printk(KERN_INFO &quot;I was assigned major number %d. To talk to\n&quot;, Major);
+</span><span class="boring">	printk(KERN_INFO &quot;the driver, create a dev file with\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;'mknod /dev/%s c %d 0'.\n&quot;, DEVICE_NAME, Major);
+</span><span class="boring">	printk(KERN_INFO &quot;Try various minor numbers. Try to cat and echo to\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;the device file.\n&quot;);
+</span><span class="boring">	printk(KERN_INFO &quot;Remove the device file and module when done.\n&quot;);
+</span><span class="boring">
+</span><span class="boring">	return SUCCESS;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/*
+</span><span class="boring"> * This function is called when the module is unloaded
+</span><span class="boring"> */
+</span><span class="boring">void cleanup_module(void)
+</span><span class="boring">{
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Unregister the device 
+</span><span class="boring">	 */
+</span><span class="boring">	unregister_chrdev(Major, DEVICE_NAME);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/*
+</span><span class="boring"> * Methods
+</span><span class="boring"> */
+</span><span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Called when a process tries to open the device file, like
+</span><span class="boring"> * &quot;cat /dev/mycharfile&quot;
+</span><span class="boring"> */
+</span><span class="boring">static int device_open(struct inode *inode, struct file *file)
+</span><span class="boring">{
+</span><span class="boring">	static int counter = 0;
+</span><span class="boring">
+</span><span class="boring">	if (Device_Open)
+</span><span class="boring">		return -EBUSY;
+</span><span class="boring">
+</span><span class="boring">	Device_Open++;
+</span><span class="boring">	sprintf(msg, &quot;I already told you %d times Hello world!\n&quot;, counter++);
+</span><span class="boring">	msg_Ptr = msg;
+</span><span class="boring">	try_module_get(THIS_MODULE);
+</span><span class="boring">
+</span><span class="boring">	return SUCCESS;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">/* 
+</span><span class="boring"> * Called when a process closes the device file.
+</span><span class="boring"> */
+</span><span class="boring">static int device_release(struct inode *inode, struct file *file)
+</span><span class="boring">{
+</span><span class="boring">	Device_Open--;		/* We're now ready for our next caller */
+</span><span class="boring">
+</span><span class="boring">	/* 
+</span><span class="boring">	 * Decrement the usage count, or else once you opened the file, you'll
+</span><span class="boring">	 * never get get rid of the module. 
+</span><span class="boring">	 */
+</span><span class="boring">	module_put(THIS_MODULE);
+</span><span class="boring">
+</span><span class="boring">	return 0;
+</span><span class="boring">}
+</span><span class="boring">
+</span>/* 
+ * Called when a process, which already opened the dev file, attempts to
+ * read from it.
+ */
+static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
+			   char *buffer,	/* buffer to fill with data */
+			   size_t length,	/* length of the buffer     */
+			   loff_t * offset)
+{
+	/*
+	 * Number of bytes actually written to the buffer 
+	 */
+	int bytes_read = 0;
+
+	/*
+	 * If we're at the end of the message, 
+	 * return 0 signifying end of file 
+	 */
+	if (*msg_Ptr == 0)
+		return 0;
+
+	/* 
+	 * Actually put the data into the buffer 
+	 */
+	while (length &amp;&amp; *msg_Ptr) {
+
+		/* 
+		 * The buffer is in the user data segment, not the kernel 
+		 * segment so &quot;*&quot; assignment won't work.  We have to use 
+		 * put_user which copies data from the kernel data segment to
+		 * the user data segment. 
+		 */
+		put_user(*(msg_Ptr++), buffer++);
+
+		length--;
+		bytes_read++;
+	}
+
+	/* 
+	 * Most read functions return the number of bytes put into the buffer
+	 */
+	return bytes_read;
+}
+<span class="boring">
+</span><span class="boring">/*  
+</span><span class="boring"> * Called when a process writes to dev file: echo &quot;hi&quot; &gt; /dev/hello 
+</span><span class="boring"> */
+</span><span class="boring">static ssize_t
+</span><span class="boring">device_write(struct file *filp, const char *buff, size_t len, loff_t * off)
+</span><span class="boring">{
+</span><span class="boring">	printk(KERN_ALERT &quot;Sorry, this operation isn't supported.\n&quot;);
+</span><span class="boring">	return -EINVAL;
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">MODULE_LICENSE(&quot;GPL&quot;);
+</span><span class="boring">
+</span><span class="boring">MODULE_AUTHOR(&quot;Linux Kernel Module Programming Guide&quot;);
+</span><span class="boring">MODULE_DESCRIPTION(&quot;Sample character device driver&quot;);
+</span><span class="boring">}</span></code></pre></pre>
+<p>Once compiled and loaded, the driver behaves as a normal device:</p>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/uio.h&gt;
+#include &lt;unistd.h&gt;
+
+int main(int argc, char **argv) {
+    char buf[128];
+
+    int fd = open(&quot;/dev/chardev&quot;, O_RDONLY);
+    if (fd &lt; 0) {
+        perror(&quot;open failed&quot;);
+        return 1;
+    }
+
+    int len = read(fd, buf, 128);
+    if (len &lt; 0) {
+        perror(&quot;read failed&quot;);
+        return 2;
+    }
+
+    buf[len] = 0;
+    printf(&quot;read %d bytes: %s\n&quot;, len, buf);
+
+    close(fd);
+    return 0;
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>
