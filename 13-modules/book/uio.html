@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Preparing your System</title>
+        <title>UIO</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html" class="active"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html" class="active"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,40 +173,84 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="preparing-your-system"><a class="header" href="#preparing-your-system">Preparing your System</a></h1>
-<p>Most Linux systems come ready to run, and are not ready for kernel development
-out of the box.</p>
-<p>The first step is to install the development tools</p>
-<pre><code class="language-bash">sudo apt update
-sudo apt install build-essential ncurses-dev xz-utils libelf-dev bison flex libssl-dev fakeroot 
-</code></pre>
-<p>You can <a href="https://wiki.ubuntu.com/Kernel/BuildYourOwnKernel">build an entire new kernel</a> for your modules to link against, or you can build out-of-tree modules
-that link against the running kernel.</p>
-<pre><code class="language-bash">sudo apt build-dep linux linux-image-unsigned-$(uname -r)
-</code></pre>
-<pre><code class="language-console">ubuntu@ubuntu:~$ uname -a
-Linux ubuntu 5.15.0-100-generic #110-Ubuntu SMP Wed Feb 7 13:28:04 UTC 2024 aarch64 aarch64 aarch64 GNU/Linux
-ubuntu@ubuntu:~$ uname -r
-5.15.0-100-generic
-ubuntu@ubuntu:~$ cat /etc/issue
-Ubuntu 22.04.3 LTS \n \l
-</code></pre>
-<p>You will likely be asked to add some <code>deb-src</code> lines to <code>etc/apt/sources.list</code>.
-You can add them by uncommenting the ones that are already in the file - just
-be sure to rerun '<code>sudo apt update</code> afterwards.</p>
-<p>To build the kernel you can generally just <code>cd</code> into the source directory and
-type <code>make</code>. If you want to see what configuration you're building, you can
-type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</code></a>:</p>
-<img src="img/menuconfig.jpg" alt="make menuconfig">
+                        <h1 id="uio"><a class="header" href="#uio">UIO</a></h1>
+<p>Why do modules run in the kernel?</p>
+<ul>
+<li>access to devices must be secure
+<ul>
+<li>the kernel is trusted to use the devices correctly</li>
+<li>the kernel is trusted to share the devices fairly</li>
+</ul>
+</li>
+<li>the module may need access to kernel functionality
+<ul>
+<li>examples are virtual memory mappings, interrupt handling, network state</li>
+</ul>
+</li>
+</ul>
+<p>But does the <em>entire</em> I/O driver need to run in the kernel?</p>
+<p>Most drivers really only need the interrupt handler and register mapping from
+the the kernel, the rest of the chip handling logic does not depend on anything
+in the kernel.</p>
+<p>The <em>Userspace I/O</em> system was designed to allow developers to implement I/O
+drivers as regular user-level programs. <code>UIO</code> offers many advantages:</p>
+<ul>
+<li>bugs in the driver can't crash the kernel</li>
+<li>the source does not have to be GPL</li>
+<li>any language and coding standard can be used</li>
+</ul>
+<h3 id="using-uio"><a class="header" href="#using-uio">Using UIO</a></h3>
+<p>The developer writes a small kernel module that</p>
+<ul>
+<li>claims ownership of the device</li>
+<li>maps the device registers into memory</li>
+<li>identifies the interrupt source(s) for the device
+<ul>
+<li>often the initial ISR is provided (e.g. to acknowledge the interrupt)</li>
+</ul>
+</li>
+<li>registers the interrupt handler and device mapping with the UIO subsystem</li>
+</ul>
+<p>The UIO system will use the registered information to configure the sysfs and
+<code>/dev</code> file systems.</p>
+<ul>
+<li>interrupts are handled by reading from <code>/dev/uioX</code> (where <code>X</code> is 0..)
+<ul>
+<li>a blocking read from this file will return when an inteerupt occurs</li>
+<li>note this is the <em>DSR</em>; the ISR happened in the kernel</li>
+</ul>
+</li>
+<li>Memory mapped registers appear in <code>/sys/class/uio/uioX</code>
+<ul>
+<li>the attributes for each region are in <code>sys/class/uio/uioX/maps/mapN</code></li>
+<li>Use <code>mmap</code> with the file descriptor to get to the device memory</li>
+</ul>
+</li>
+<li>Some devices do not have memory mapped registers, e.g. X86 ioports. These ioports can be accessed through <code>/sys/class/uio/uioX/portio/portN</code></li>
+</ul>
+<p>The user-space driver can now use the UIO files to implement the I/O protocol</p>
+<ul>
+<li>the interrupt <code>read</code> returns the count of interrupts received
+<ul>
+<li>use can use this count to look for missed interrupts, etc.</li>
+</ul>
+</li>
+<li>remember that some chips will require physical addresses for I/O
+<ul>
+<li>you will have to determine how to translate your virtual addresses to physical addresses</li>
+</ul>
+</li>
+</ul>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="devices.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="chrdev-rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="hello.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="uio-example.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -216,11 +260,11 @@ type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="devices.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="chrdev-rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="hello.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="uio-example.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

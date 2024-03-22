@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Preparing your System</title>
+        <title>Devices in Rust</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html" class="active"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html" class="active"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,40 +173,143 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="preparing-your-system"><a class="header" href="#preparing-your-system">Preparing your System</a></h1>
-<p>Most Linux systems come ready to run, and are not ready for kernel development
-out of the box.</p>
-<p>The first step is to install the development tools</p>
-<pre><code class="language-bash">sudo apt update
-sudo apt install build-essential ncurses-dev xz-utils libelf-dev bison flex libssl-dev fakeroot 
-</code></pre>
-<p>You can <a href="https://wiki.ubuntu.com/Kernel/BuildYourOwnKernel">build an entire new kernel</a> for your modules to link against, or you can build out-of-tree modules
-that link against the running kernel.</p>
-<pre><code class="language-bash">sudo apt build-dep linux linux-image-unsigned-$(uname -r)
-</code></pre>
-<pre><code class="language-console">ubuntu@ubuntu:~$ uname -a
-Linux ubuntu 5.15.0-100-generic #110-Ubuntu SMP Wed Feb 7 13:28:04 UTC 2024 aarch64 aarch64 aarch64 GNU/Linux
-ubuntu@ubuntu:~$ uname -r
-5.15.0-100-generic
-ubuntu@ubuntu:~$ cat /etc/issue
-Ubuntu 22.04.3 LTS \n \l
-</code></pre>
-<p>You will likely be asked to add some <code>deb-src</code> lines to <code>etc/apt/sources.list</code>.
-You can add them by uncommenting the ones that are already in the file - just
-be sure to rerun '<code>sudo apt update</code> afterwards.</p>
-<p>To build the kernel you can generally just <code>cd</code> into the source directory and
-type <code>make</code>. If you want to see what configuration you're building, you can
-type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</code></a>:</p>
-<img src="img/menuconfig.jpg" alt="make menuconfig">
+                        <h1 id="rust-chrdev-module"><a class="header" href="#rust-chrdev-module">Rust chrdev Module</a></h1>
+<p>Character devices have to be <a href="https://rust-for-linux.github.io/docs/kernel/chrdev/struct.Registration.html">registered</a></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">// SPDX-License-Identifier: GPL-2.0
+</span><span class="boring">
+</span><span class="boring">//! Rust character device sample.
+</span><span class="boring">
+</span><span class="boring">use kernel::prelude::*;
+</span><span class="boring">use kernel::{chrdev,
+</span><span class="boring">    file::{self, File},
+</span><span class="boring">    io_buffer::IoBufferWriter,
+</span><span class="boring">};
+</span><span class="boring">
+</span>module! {
+    type: RustChrdev,
+    name: b&quot;rust_chrdev&quot;,
+    author: b&quot;Rust for Linux Contributors&quot;,
+    description: b&quot;Rust character device sample&quot;,
+    license: b&quot;GPL&quot;,
+}
+
+struct RustChrdev {
+    _dev: Pin&lt;Box&lt;chrdev::Registration&lt;2&gt;&gt;&gt;,
+}
+
+impl kernel::Module for RustChrdev {
+    fn init(name: &amp;'static CStr, module: &amp;'static ThisModule) -&gt; Result&lt;Self&gt; {
+        pr_info!(&quot;Rust character device sample (init) {}\n&quot;, name);
+
+        let mut chrdev_reg = chrdev::Registration::new_pinned(name, 0, module)?;
+
+        // Register the same kind of device twice, we're just demonstrating
+        // that you can use multiple minors. There are two minors in this case
+        // because its type is `chrdev::Registration&lt;2&gt;`
+        chrdev_reg.as_mut().register::&lt;RustFile&gt;()?;
+        chrdev_reg.as_mut().register::&lt;RustFile&gt;()?;
+
+        Ok(RustChrdev { _dev: chrdev_reg })
+    }
+}
+<span class="boring">
+</span><span class="boring">struct RustFile;
+</span><span class="boring">
+</span><span class="boring">#[vtable]
+</span><span class="boring">impl file::Operations for RustFile {
+</span><span class="boring">    fn open(_shared: &amp;(), _file: &amp;file::File) -&gt; Result {
+</span><span class="boring">        pr_info!(&quot;rust_chrdev opened&quot;);
+</span><span class="boring">        Ok(())
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    fn read(_this: (), file: &amp;File, buf: &amp;mut impl IoBufferWriter, _: u64) -&gt; Result&lt;usize&gt; {
+</span><span class="boring">        let bytes = &quot;read from rust_chrdev\n&quot;;
+</span><span class="boring">        buf.write_slice(bytes.as_bytes())?;
+</span><span class="boring">        Ok(bytes.len())
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl Drop for RustChrdev {
+</span><span class="boring">    fn drop(&amp;mut self) {
+</span><span class="boring">        pr_info!(&quot;Rust character device sample (exit)\n&quot;);
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">}</span></code></pre></pre>
+<p><a href="https://rust-for-linux.github.io/docs/kernel/file/trait.Operations.html">kernel::file::Operations</a> are the equivalent of <code>fileops</code> in C:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">// SPDX-License-Identifier: GPL-2.0
+</span><span class="boring">
+</span><span class="boring">//! Rust character device sample.
+</span><span class="boring">
+</span><span class="boring">use kernel::prelude::*;
+</span><span class="boring">use kernel::{chrdev,
+</span><span class="boring">    file::{self, File},
+</span><span class="boring">    io_buffer::IoBufferWriter,
+</span><span class="boring">};
+</span><span class="boring">
+</span><span class="boring">module! {
+</span><span class="boring">    type: RustChrdev,
+</span><span class="boring">    name: b&quot;rust_chrdev&quot;,
+</span><span class="boring">    author: b&quot;Rust for Linux Contributors&quot;,
+</span><span class="boring">    description: b&quot;Rust character device sample&quot;,
+</span><span class="boring">    license: b&quot;GPL&quot;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">struct RustChrdev {
+</span><span class="boring">    _dev: Pin&lt;Box&lt;chrdev::Registration&lt;2&gt;&gt;&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">impl kernel::Module for RustChrdev {
+</span><span class="boring">    fn init(name: &amp;'static CStr, module: &amp;'static ThisModule) -&gt; Result&lt;Self&gt; {
+</span><span class="boring">        pr_info!(&quot;Rust character device sample (init) {}\n&quot;, name);
+</span><span class="boring">
+</span><span class="boring">        let mut chrdev_reg = chrdev::Registration::new_pinned(name, 0, module)?;
+</span><span class="boring">
+</span><span class="boring">        // Register the same kind of device twice, we're just demonstrating
+</span><span class="boring">        // that you can use multiple minors. There are two minors in this case
+</span><span class="boring">        // because its type is `chrdev::Registration&lt;2&gt;`
+</span><span class="boring">        chrdev_reg.as_mut().register::&lt;RustFile&gt;()?;
+</span><span class="boring">        chrdev_reg.as_mut().register::&lt;RustFile&gt;()?;
+</span><span class="boring">
+</span><span class="boring">        Ok(RustChrdev { _dev: chrdev_reg })
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span>struct RustFile;
+
+#[vtable]
+impl file::Operations for RustFile {
+    fn open(_shared: &amp;(), _file: &amp;file::File) -&gt; Result {
+        pr_info!(&quot;rust_chrdev opened&quot;);
+        Ok(())
+    }
+
+    fn read(_this: (), file: &amp;File, buf: &amp;mut impl IoBufferWriter, _: u64) -&gt; Result&lt;usize&gt; {
+        let bytes = &quot;read from rust_chrdev\n&quot;;
+        buf.write_slice(bytes.as_bytes())?;
+        Ok(bytes.len())
+    }
+}
+<span class="boring">
+</span><span class="boring">impl Drop for RustChrdev {
+</span><span class="boring">    fn drop(&amp;mut self) {
+</span><span class="boring">        pr_info!(&quot;Rust character device sample (exit)\n&quot;);
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">}</span></code></pre></pre>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="devices.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="hello-rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="hello.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="uio.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -216,11 +319,11 @@ type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="devices.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="hello-rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="hello.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="uio.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

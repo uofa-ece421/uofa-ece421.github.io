@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Preparing your System</title>
+        <title>Hello Rust</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html" class="active"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html" class="active"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,40 +173,59 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="preparing-your-system"><a class="header" href="#preparing-your-system">Preparing your System</a></h1>
-<p>Most Linux systems come ready to run, and are not ready for kernel development
-out of the box.</p>
-<p>The first step is to install the development tools</p>
-<pre><code class="language-bash">sudo apt update
-sudo apt install build-essential ncurses-dev xz-utils libelf-dev bison flex libssl-dev fakeroot 
-</code></pre>
-<p>You can <a href="https://wiki.ubuntu.com/Kernel/BuildYourOwnKernel">build an entire new kernel</a> for your modules to link against, or you can build out-of-tree modules
-that link against the running kernel.</p>
-<pre><code class="language-bash">sudo apt build-dep linux linux-image-unsigned-$(uname -r)
-</code></pre>
-<pre><code class="language-console">ubuntu@ubuntu:~$ uname -a
-Linux ubuntu 5.15.0-100-generic #110-Ubuntu SMP Wed Feb 7 13:28:04 UTC 2024 aarch64 aarch64 aarch64 GNU/Linux
-ubuntu@ubuntu:~$ uname -r
-5.15.0-100-generic
-ubuntu@ubuntu:~$ cat /etc/issue
-Ubuntu 22.04.3 LTS \n \l
-</code></pre>
-<p>You will likely be asked to add some <code>deb-src</code> lines to <code>etc/apt/sources.list</code>.
-You can add them by uncommenting the ones that are already in the file - just
-be sure to rerun '<code>sudo apt update</code> afterwards.</p>
-<p>To build the kernel you can generally just <code>cd</code> into the source directory and
-type <code>make</code>. If you want to see what configuration you're building, you can
-type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</code></a>:</p>
-<img src="img/menuconfig.jpg" alt="make menuconfig">
+                        <h1 id="hello-rust"><a class="header" href="#hello-rust">Hello Rust</a></h1>
+<p>The simplest Rust module possible:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// SPDX-License-Identifier: GPL-2.0
+
+//! Rust minimal sample.
+
+use kernel::prelude::*;
+
+module! {
+    type: RustMinimal,
+    name: &quot;rust_minimal&quot;,
+    author: &quot;Rust for Linux Contributors&quot;,
+    description: &quot;Rust minimal sample&quot;,
+    license: &quot;GPL&quot;,
+}
+
+struct RustMinimal {
+    numbers: Vec&lt;i32&gt;,
+}
+
+impl kernel::Module for RustMinimal {
+    fn init(_name: &amp;'static CStr, _module: &amp;'static ThisModule) -&gt; Result&lt;Self&gt; {
+        pr_info!(&quot;Rust minimal sample (init)\n&quot;);
+        pr_info!(&quot;Am I built-in? {}\n&quot;, !cfg!(MODULE));
+
+        let mut numbers = Vec::new();
+        numbers.try_push(72)?;
+        numbers.try_push(108)?;
+        numbers.try_push(200)?;
+
+        Ok(RustMinimal { numbers })
+    }
+}
+
+impl Drop for RustMinimal {
+    fn drop(&amp;mut self) {
+        pr_info!(&quot;My numbers are {:?}\n&quot;, self.numbers);
+        pr_info!(&quot;Rust minimal sample (exit)\n&quot;);
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="devices.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="hello.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="chrdev-rust.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -216,11 +235,11 @@ type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="devices.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="hello.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="chrdev-rust.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
