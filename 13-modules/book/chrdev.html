@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Character Devices - Kernel Modules</title>
+        <title>Character Devices</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html"><strong aria-hidden="true">3.</strong> Preparing you System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html" class="active"><strong aria-hidden="true">6.</strong> Character Devices</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html" class="active"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -141,7 +141,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">Kernel Modules</h1>
+                    <h1 class="menu-title"></h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -249,7 +249,6 @@ character device:</p>
 </span><span class="boring">static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 </span><span class="boring">
 </span><span class="boring">#define SUCCESS 0
-</span><span class="boring">#define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
 </span><span class="boring">#define BUF_LEN 80		/* Max length of the message from the device */
 </span><span class="boring">
 </span><span class="boring">/* 
@@ -262,7 +261,9 @@ character device:</p>
 </span><span class="boring">static char msg[BUF_LEN];	/* The msg the device will give when asked */
 </span><span class="boring">static char *msg_Ptr;
 </span><span class="boring">
-</span>static struct file_operations fops = {
+</span><span class="boring">define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
+</span>
+static struct file_operations fops = {
 	.read = device_read,
 	.write = device_write,
 	.open = device_open,
@@ -425,7 +426,6 @@ driver only allows a single <code>open</code> at a time.</p>
 </span><span class="boring">static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 </span><span class="boring">
 </span><span class="boring">#define SUCCESS 0
-</span><span class="boring">#define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
 </span><span class="boring">#define BUF_LEN 80		/* Max length of the message from the device */
 </span><span class="boring">
 </span><span class="boring">/* 
@@ -437,6 +437,8 @@ driver only allows a single <code>open</code> at a time.</p>
 </span><span class="boring">				 * Used to prevent multiple access to device */
 </span><span class="boring">static char msg[BUF_LEN];	/* The msg the device will give when asked */
 </span><span class="boring">static char *msg_Ptr;
+</span><span class="boring">
+</span><span class="boring">#define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
 </span><span class="boring">
 </span><span class="boring">static struct file_operations fops = {
 </span><span class="boring">	.read = device_read,
@@ -599,7 +601,6 @@ static int device_release(struct inode *inode, struct file *file)
 </span><span class="boring">static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 </span><span class="boring">
 </span><span class="boring">#define SUCCESS 0
-</span><span class="boring">#define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
 </span><span class="boring">#define BUF_LEN 80		/* Max length of the message from the device */
 </span><span class="boring">
 </span><span class="boring">/* 
@@ -611,6 +612,8 @@ static int device_release(struct inode *inode, struct file *file)
 </span><span class="boring">				 * Used to prevent multiple access to device */
 </span><span class="boring">static char msg[BUF_LEN];	/* The msg the device will give when asked */
 </span><span class="boring">static char *msg_Ptr;
+</span><span class="boring">
+</span><span class="boring">#define DEVICE_NAME &quot;chardev&quot;	/* Dev name as it appears in /proc/devices   */
 </span><span class="boring">
 </span><span class="boring">static struct file_operations fops = {
 </span><span class="boring">	.read = device_read,
@@ -787,6 +790,9 @@ int main(int argc, char **argv) {
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
+                            <a rel="next prefetch" href="rust.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -798,6 +804,9 @@ int main(int argc, char **argv) {
                         <i class="fa fa-angle-left"></i>
                     </a>
 
+                    <a rel="next prefetch" href="rust.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>

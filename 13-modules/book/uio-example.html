@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Preparing your System</title>
+        <title>Example UIO kernel module</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html" class="active"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="devices.html"><strong aria-hidden="true">2.</strong> Devices</a></li><li class="chapter-item expanded "><a href="prep.html"><strong aria-hidden="true">3.</strong> Preparing your System</a></li><li class="chapter-item expanded "><a href="hello.html"><strong aria-hidden="true">4.</strong> Hello World</a></li><li class="chapter-item expanded "><a href="next.html"><strong aria-hidden="true">5.</strong> Module Documentation</a></li><li class="chapter-item expanded "><a href="chrdev.html"><strong aria-hidden="true">6.</strong> Character Devices</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and Linux</a></li><li class="chapter-item expanded "><a href="hello-rust.html"><strong aria-hidden="true">8.</strong> Hello Rust</a></li><li class="chapter-item expanded "><a href="chrdev-rust.html"><strong aria-hidden="true">9.</strong> Devices in Rust</a></li><li class="chapter-item expanded "><a href="uio.html"><strong aria-hidden="true">10.</strong> UIO</a></li><li class="chapter-item expanded "><a href="uio-example.html" class="active"><strong aria-hidden="true">11.</strong> Example UIO kernel module</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,42 +173,152 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="preparing-your-system"><a class="header" href="#preparing-your-system">Preparing your System</a></h1>
-<p>Most Linux systems come ready to run, and are not ready for kernel development
-out of the box.</p>
-<p>The first step is to install the development tools</p>
-<pre><code class="language-bash">sudo apt update
-sudo apt install build-essential ncurses-dev xz-utils libelf-dev bison flex libssl-dev fakeroot 
+                        <h1 id="example-uio-kernel-module"><a class="header" href="#example-uio-kernel-module">Example UIO Kernel Module</a></h1>
+<p>From the <a href="https://docs.kernel.org/driver-api/uio-howto.html#">UIO HOWTO</a></p>
+<pre><code class="language-c">// SPDX-License-Identifier: GPL-2.0
+/*
+ * UIO Hilscher CIF card driver
+ *
+ * (C) 2007 Hans J. Koch &lt;hjk@hansjkoch.de&gt;
+ * Original code (C) 2005 Benedikt Spranger &lt;b.spranger@linutronix.de&gt;
+ */
+
+#include &lt;linux/device.h&gt;
+#include &lt;linux/module.h&gt;
+#include &lt;linux/pci.h&gt;
+#include &lt;linux/slab.h&gt;
+#include &lt;linux/uio_driver.h&gt;
+
+#include &lt;asm/io.h&gt;
+
+#define PLX9030_INTCSR		0x4C
+#define INTSCR_INT1_ENABLE	0x01
+#define INTSCR_INT1_STATUS	0x04
+#define INT1_ENABLED_AND_ACTIVE	(INTSCR_INT1_ENABLE | INTSCR_INT1_STATUS)
+
+#define PCI_SUBVENDOR_ID_PEP	0x1518
+#define CIF_SUBDEVICE_PROFIBUS	0x430
+#define CIF_SUBDEVICE_DEVICENET	0x432
+
+
+static irqreturn_t hilscher_handler(int irq, struct uio_info *dev_info)
+{
+	void __iomem *plx_intscr = dev_info-&gt;mem[0].internal_addr
+					+ PLX9030_INTCSR;
+
+	if ((ioread8(plx_intscr) &amp; INT1_ENABLED_AND_ACTIVE)
+	    != INT1_ENABLED_AND_ACTIVE)
+		return IRQ_NONE;
+
+	/* Disable interrupt */
+	iowrite8(ioread8(plx_intscr) &amp; ~INTSCR_INT1_ENABLE, plx_intscr);
+	return IRQ_HANDLED;
+}
+
+static int hilscher_pci_probe(struct pci_dev *dev,
+					const struct pci_device_id *id)
+{
+	struct uio_info *info;
+
+	info = devm_kzalloc(&amp;dev-&gt;dev, sizeof(struct uio_info), GFP_KERNEL);
+	if (!info)
+		return -ENOMEM;
+
+	if (pci_enable_device(dev))
+		return -ENODEV;
+
+	if (pci_request_regions(dev, &quot;hilscher&quot;))
+		goto out_disable;
+
+	info-&gt;mem[0].addr = pci_resource_start(dev, 0);
+	if (!info-&gt;mem[0].addr)
+		goto out_release;
+	info-&gt;mem[0].internal_addr = pci_ioremap_bar(dev, 0);
+	if (!info-&gt;mem[0].internal_addr)
+		goto out_release;
+
+	info-&gt;mem[0].size = pci_resource_len(dev, 0);
+	info-&gt;mem[0].memtype = UIO_MEM_PHYS;
+	info-&gt;mem[1].addr = pci_resource_start(dev, 2);
+	info-&gt;mem[1].size = pci_resource_len(dev, 2);
+	info-&gt;mem[1].memtype = UIO_MEM_PHYS;
+	switch (id-&gt;subdevice) {
+		case CIF_SUBDEVICE_PROFIBUS:
+			info-&gt;name = &quot;CIF_Profibus&quot;;
+			break;
+		case CIF_SUBDEVICE_DEVICENET:
+			info-&gt;name = &quot;CIF_Devicenet&quot;;
+			break;
+		default:
+			info-&gt;name = &quot;CIF_???&quot;;
+	}
+	info-&gt;version = &quot;0.0.1&quot;;
+	info-&gt;irq = dev-&gt;irq;
+	info-&gt;irq_flags = IRQF_SHARED;
+	info-&gt;handler = hilscher_handler;
+
+	if (uio_register_device(&amp;dev-&gt;dev, info))
+		goto out_unmap;
+
+	pci_set_drvdata(dev, info);
+
+	return 0;
+out_unmap:
+	iounmap(info-&gt;mem[0].internal_addr);
+out_release:
+	pci_release_regions(dev);
+out_disable:
+	pci_disable_device(dev);
+	return -ENODEV;
+}
+
+static void hilscher_pci_remove(struct pci_dev *dev)
+{
+	struct uio_info *info = pci_get_drvdata(dev);
+
+	uio_unregister_device(info);
+	pci_release_regions(dev);
+	pci_disable_device(dev);
+	iounmap(info-&gt;mem[0].internal_addr);
+}
+
+static struct pci_device_id hilscher_pci_ids[] = {
+	{
+		.vendor =	PCI_VENDOR_ID_PLX,
+		.device =	PCI_DEVICE_ID_PLX_9030,
+		.subvendor =	PCI_SUBVENDOR_ID_PEP,
+		.subdevice =	CIF_SUBDEVICE_PROFIBUS,
+	},
+	{
+		.vendor =	PCI_VENDOR_ID_PLX,
+		.device =	PCI_DEVICE_ID_PLX_9030,
+		.subvendor =	PCI_SUBVENDOR_ID_PEP,
+		.subdevice =	CIF_SUBDEVICE_DEVICENET,
+	},
+	{ 0, }
+};
+
+static struct pci_driver hilscher_pci_driver = {
+	.name = &quot;hilscher&quot;,
+	.id_table = hilscher_pci_ids,
+	.probe = hilscher_pci_probe,
+	.remove = hilscher_pci_remove,
+};
+
+module_pci_driver(hilscher_pci_driver);
+MODULE_DEVICE_TABLE(pci, hilscher_pci_ids);
+MODULE_LICENSE(&quot;GPL v2&quot;);
+MODULE_AUTHOR(&quot;Hans J. Koch, Benedikt Spranger&quot;);
 </code></pre>
-<p>You can <a href="https://wiki.ubuntu.com/Kernel/BuildYourOwnKernel">build an entire new kernel</a> for your modules to link against, or you can build out-of-tree modules
-that link against the running kernel.</p>
-<pre><code class="language-bash">sudo apt build-dep linux linux-image-unsigned-$(uname -r)
-</code></pre>
-<pre><code class="language-console">ubuntu@ubuntu:~$ uname -a
-Linux ubuntu 5.15.0-100-generic #110-Ubuntu SMP Wed Feb 7 13:28:04 UTC 2024 aarch64 aarch64 aarch64 GNU/Linux
-ubuntu@ubuntu:~$ uname -r
-5.15.0-100-generic
-ubuntu@ubuntu:~$ cat /etc/issue
-Ubuntu 22.04.3 LTS \n \l
-</code></pre>
-<p>You will likely be asked to add some <code>deb-src</code> lines to <code>etc/apt/sources.list</code>.
-You can add them by uncommenting the ones that are already in the file - just
-be sure to rerun '<code>sudo apt update</code> afterwards.</p>
-<p>To build the kernel you can generally just <code>cd</code> into the source directory and
-type <code>make</code>. If you want to see what configuration you're building, you can
-type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</code></a>:</p>
-<img src="img/menuconfig.jpg" alt="make menuconfig">
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="devices.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="uio.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="hello.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -216,13 +326,10 @@ type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="devices.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="uio.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="hello.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
             </nav>
 
         </div>
