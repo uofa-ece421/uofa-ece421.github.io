@@ -267,6 +267,7 @@ fn main() {
 </span><span class="boring">    println!(&quot;our first list based stack: {}&quot;, stack);
 </span><span class="boring">}
 </span><span class="boring"></span></code></pre></pre>
+<img src="img/sl-list.001.jpeg" alt="Insert at head">
 <p>The problem is that <code>new</code> consumes it's arguments, i.e. it takes ownership away
 from <code>self.root</code>.</p>
 <p>The secret is <a href="https://doc.rust-lang.org/std/mem/fn.replace.html">std::mem::replace</a></p>

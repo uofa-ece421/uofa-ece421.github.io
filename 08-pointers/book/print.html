@@ -296,6 +296,7 @@ fn main() {
 </span><span class="boring">    println!(&quot;our first list based stack: {}&quot;, stack);
 </span><span class="boring">}
 </span><span class="boring"></span></code></pre></pre>
+<img src="img/sl-list.001.jpeg" alt="Insert at head">
 <p>The problem is that <code>new</code> consumes it's arguments, i.e. it takes ownership away
 from <code>self.root</code>.</p>
 <p>The secret is <a href="https://doc.rust-lang.org/std/mem/fn.replace.html">std::mem::replace</a></p>
@@ -601,13 +602,13 @@ struct DList&lt;T&gt; {
 </span><span class="boring">impl&lt;T: std::fmt::Display&gt; fmt::Display for DList&lt;T&gt; {
 </span><span class="boring">    fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
 </span><span class="boring">        write!(f, &quot;[&quot;)?;
-</span><span class="boring">        let p = &amp;self.root.next.upgrade().unwrap();
+</span><span class="boring">        let mut p = &amp;self.root.next.upgrade().unwrap();
 </span><span class="boring">        loop {
 </span><span class="boring">            if std::ptr::eq(p, &amp;self.root) {
 </span><span class="boring">                break;
 </span><span class="boring">            }
 </span><span class="boring">            write!(f, &quot;{} &quot;, p.val)?;
-</span><span class="boring">            let p = &amp;p.next.upgrade().unwrap();
+</span><span class="boring">            p = &amp;p.next.upgrade().unwrap();
 </span><span class="boring">        }
 </span><span class="boring">        write!(f, &quot;]&quot;)
 </span><span class="boring">    }
@@ -634,7 +635,7 @@ struct DList&lt;T&gt; {
 </span><span class="boring">    stack.push(42);
 </span><span class="boring">    println!(&quot;first stack {}&quot;, stack);
 </span><span class="boring">}</span></code></pre></pre>
-<p>Issue creating DLNodes: need <a href="https://doc.rust-lang.org/std/rc/struct.Rc.html">Weak</a></p>
+<p>Issue creating DLNodes: need <a href="https://doc.rust-lang.org/std/rc/struct.Rc.html">new_cyclic</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="interior-mutability"><a class="header" href="#interior-mutability">Interior Mutability</a></h1>
 <p>Rust memory safety is based on two rules:</p>
 <ul>

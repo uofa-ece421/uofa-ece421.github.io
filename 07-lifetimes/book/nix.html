@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Lifetimes</title>
-        <meta name="robots" content="noindex">
+        <title>nix - Lifetimes</title>
 
 
         <!-- Custom HTML head -->
@@ -89,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">1.</strong> Generics</a></li><li class="chapter-item expanded "><a href="traits.html"><strong aria-hidden="true">2.</strong> Traits</a></li><li class="chapter-item expanded "><a href="nix.html"><strong aria-hidden="true">3.</strong> nix</a></li><li class="chapter-item expanded "><a href="lifetimes.html"><strong aria-hidden="true">4.</strong> Lifetimes</a></li><li class="chapter-item expanded "><a href="structs.html"><strong aria-hidden="true">5.</strong> Structs and Methods</a></li><li class="chapter-item expanded "><a href="elision.html"><strong aria-hidden="true">6.</strong> Lifetime Elision</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">1.</strong> Generics</a></li><li class="chapter-item expanded "><a href="traits.html"><strong aria-hidden="true">2.</strong> Traits</a></li><li class="chapter-item expanded "><a href="nix.html" class="active"><strong aria-hidden="true">3.</strong> nix</a></li><li class="chapter-item expanded "><a href="lifetimes.html"><strong aria-hidden="true">4.</strong> Lifetimes</a></li><li class="chapter-item expanded "><a href="structs.html"><strong aria-hidden="true">5.</strong> Structs and Methods</a></li><li class="chapter-item expanded "><a href="elision.html"><strong aria-hidden="true">6.</strong> Lifetime Elision</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -174,91 +173,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="generic-data-types"><a class="header" href="#generic-data-types">Generic Data Types</a></h1>
-<p>Rust <em>Generics</em> can be used like type templates in <em>C++</em> </p>
-<p>Note that Rust's type inference allows you to omit <code>T</code> at
-the call site most of the time.</p>
-<pre><pre class="playground"><code class="language-rust">fn print_max&lt;T&gt;(x: T, y: T) {
-    if x &gt;= y {
-        println!(&quot;{x} &gt;= {y}&quot;);
-    } else {
-        println!(&quot;{y} &gt; {x}&quot;);
-    }
-}
-
-fn main() {
-    print_max::&lt;u16&gt;(123, 321);
-    print_max(3.14, 1.414);
-}</code></pre></pre>
-<p>Use traits to restrict types that can be passed</p>
-<pre><pre class="playground"><code class="language-rust">fn print_max&lt;T: std::cmp::PartialOrd + std::fmt::Display&gt;(x: T, y: T) {
-    if x &gt;= y {
-        println!(&quot;{x} &gt;= {y}&quot;);
-    } else {
-        println!(&quot;{y} &gt; {x}&quot;);
-    }
-}
-
-fn main() {
-    print_max(123, 321);
-    print_max(3.14, 1.414);
-}</code></pre></pre>
-<p>Rust uses <em>monomorphization</em> to turn generics into specifics at compile time.
-The allows Rust to only build the type signatures needed, and to do it early
-so the code can be optimized.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="traits"><a class="header" href="#traits">Traits</a></h1>
-<p>Traits are very much like <em>interfaces</em> in Java.</p>
-<p>You can create new, custom traits, or implement required traits for custom data structures.</p>
-<p>For example, <code>print_max</code> requires the trait <a href="https://doc.rust-lang.org/std/cmp/trait.PartialOrd.html">std::cmp::PartialOrd</a></p>
-<p>The syntax is <code>impl Trait for Type {}</code></p>
-<pre><pre class="playground"><code class="language-rust">use std::cmp::Ordering;
-
-// Many traits can be given a default implementation by the compiler
-#[derive(Debug)]
-struct Point {
-    x: f32,
-    y: f32,
-}
-
-// PartialOrd requires PartialEq
-impl std::cmp::PartialEq for Point {
-    fn eq(&amp;self, other: &amp;Self) -&gt; bool {
-        self.x == other.x &amp;&amp; self.y == other.y
-    }
-}
-
-impl std::cmp::PartialOrd for Point {
-    fn partial_cmp(&amp;self, other: &amp;Self) -&gt; Option&lt;Ordering&gt; {
-        let lhs = self.x*self.x + self.y*self.y;
-        let rhs = other.x*other.x + other.y*other.y;
-        if lhs &lt; rhs {
-            Some(Ordering::Less)
-        }
-        else if lhs == rhs {
-            Some(Ordering::Equal)
-        }
-        else {
-            Some(Ordering::Greater)
-        }
-    }
-}
-
-// You can use &quot;where&quot; to help make the signature more readable
-fn print_max&lt;T&gt;(x: T, y: T) where T: std::cmp::PartialOrd + std::fmt::Debug {
-    if x &gt;= y {
-        println!(&quot;{:?} &gt;= {:?}&quot;, x, y);
-    } else {
-        println!(&quot;{:?} &gt; {:?}&quot;, y, x);
-    }
-}
-
-fn main() {
-    let a = Point { x: 1.0, y: 0.0 };
-    let b = Point { x: 0.0, y: 1.0 };
-
-    print_max(a, b);
-}</code></pre></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="nix"><a class="header" href="#nix">nix</a></h1>
+                        <h1 id="nix"><a class="header" href="#nix">nix</a></h1>
 <p><a href="https://crates.io/crates/nix">nix</a> provides a rust friendly wrapping over
 OS calls that are normally <code>unsafe</code>.</p>
 <p>Examples from the <code>nix::sys::socket</code> module: </p>
@@ -302,158 +217,18 @@ fn main() {
 
     write(fd.as_fd(), &amp;mut buf).unwrap();
 }</code></pre></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="lifetimes"><a class="header" href="#lifetimes">Lifetimes</a></h1>
-<p>Lifetimes are a type of generic used to ensure references are valid.</p>
-<p>Remember that every value has an owner, and when the owner goes out of scope
-the value is dropped. Every reference also has a <em>lifetime</em>, which must be
-within the lifetime of the value it points at.</p>
-<pre><pre class="playground"><code class="language-rust">fn main() {
-    let r;                // ---------+-- 'a
-                          //          |
-    {                     //          |
-        let x = 5;        // -+-- 'b  |
-        r = &amp;x;           //  |       |
-    }                     // -+       |
-                          //          |
-    println!(&quot;r: {}&quot;, r); //          |
-}                         // ---------+</code></pre></pre>
-<p>Rust associates every scope with a lifetime, e.g. <code>'a</code> and <code>'b</code> above.
-Most of the time, the borrow checker can ensure there are no dangling
-references, so you don't have to specify the lifetimes.</p>
-<pre><pre class="playground"><code class="language-rust">#[derive(Debug)]
-struct MenuItem {
-     name: &amp;'static str,
-     price: f32,
-}
-
-impl MenuItem {
-     fn display(&amp;self) {
-         println!(&quot;Enjoy {} for only ${:.2}&quot;, self.name, self.price);
-     }
-}
-
-fn main() {
-     let steak = MenuItem { name: &quot;Steak&quot;, price: 5.0E1 };
-
-     steak.display();
-}</code></pre></pre>
-<p>The pre-defined <code>'static</code> lifetime means <em>alive for the entire program</em>.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="lifetimes-for-structs"><a class="header" href="#lifetimes-for-structs">Lifetimes for Structs</a></h1>
-<p>Note the generics annotation syntax is now being used for lifetimes</p>
-<pre><pre class="playground"><code class="language-rust">#[derive(Debug)]
-// The struct containing the reference has to live at least as long as the reference
-struct MenuItem&lt;'item&gt; {
-     name: &amp;'item str,
-     price: f32,
-}
-
-// We're just referencing name, so an anonymous lifetime is sufficient
-impl MenuItem&lt;'_&gt; {
-     fn display(&amp;self) {
-         println!(&quot;Enjoy {} for only ${:.2}&quot;, self.name, self.price);
-     }
-}
-
-fn main() {
-     let items = vec![String::from(&quot;Steak&quot;), String::from(&quot;Hot Dog&quot;)];
-     let steak = MenuItem { name: &amp;items[0], price: 5.0E1 };
-
-     steak.display();
-}</code></pre></pre>
-<pre><pre class="playground"><code class="language-rust">#[derive(Debug)]
-struct MenuItem&lt;'item&gt; {
-     name: &amp;'item str,
-     price: f32,
-}
-
-impl&lt;'item&gt; MenuItem&lt;'item&gt; {
-     fn display(&amp;self) {
-         println!(&quot;Enjoy {} for only ${:.2}&quot;, self.name, self.price);
-     }
-
-     // This uses lifetime coercion to say lifetime 'b is at least as long as 'item
-     fn substitute&lt;'b: 'item&gt;(&amp; mut self, new_item: &amp;'b str) {
-        self.name = new_item;
-     }
-}
-
-fn nice_try&lt;'a&gt;(item: &amp;'a mut MenuItem) {
-     // let fast_food = String::from(&quot;Fast food&quot;);
-     let fast_food = &quot;Fast food&quot;;
-     item.substitute(&amp;fast_food);
-}
-
-fn main() {
-     let items = vec![String::from(&quot;Steak&quot;), String::from(&quot;Hot Dog&quot;)];
-     let mut steak = MenuItem { name: &amp;items[0], price: 5.0E1 };
-
-     nice_try(&amp;mut steak);
-     
-     steak.substitute(&amp;items[1]);
-     steak.display();
-}</code></pre></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="lifetime-elision"><a class="header" href="#lifetime-elision">Lifetime Elision</a></h1>
-<p>Every reference in Rust has a lifetime, and Rust always checks the owner's
-lifetime to ensure there are no dangling pointers.</p>
-<p>Before Rust version 1.0 every reference required an explicit lifetime.
-However, the compiler can now infer lifetimes in several situations so that you
-don't always have to specify the lifetime for every reference.</p>
-<h3 id="lifetime-elision-rules"><a class="header" href="#lifetime-elision-rules">Lifetime Elision Rules</a></h3>
-<ol>
-<li>The compiler first assigns a lifetime identifier to each parameter that is a reference:
-<ul>
-<li><code>fn max&lt;'a, 'b&gt;(x: &amp;'a i32, y: &amp;'b i32)</code></li>
-</ul>
-</li>
-<li>If there is only one input lifetime parameter, that lifetime is assigned to all output lifetime parameters:
-<ul>
-<li><code>fn one&lt;'a&gt;(i: &amp;'a i32) -&gt; &amp;'a i32</code></li>
-</ul>
-</li>
-<li>If there are multiple input parameters but one of them is <code>&amp;self</code> or <code>&amp;mut self</code>, then the lifetime of <code>self</code> is applied to all output lifetime parameters.</li>
-</ol>
-<pre><pre class="playground"><code class="language-rust">fn show_max(x: &amp;f32, y: &amp;f32) {
-    let op = if x &gt;= y {
-        &quot;&gt;=&quot;
-    } else {
-        &quot;&lt;&quot;
-    };
-    println!(&quot;{0} {1} {2}&quot;, x, op, y);
-}
-
-fn first_word(sentence: &amp;str) -&gt; &amp;str {
-    for (i, &amp;c) in sentence.as_bytes().iter().enumerate() {
-        if c == b' ' {
-           return &amp;sentence[..i];
-        }
-    }
-    &amp;sentence
-}
-
-fn ref_max&lt;'a&gt;(x: &amp;'a f32, y: &amp;'a f32) -&gt; &amp;'a f32 {
-    if x &gt;= y {
-        x
-    }
-    else {
-        y
-    }
-}
-
-fn main() {
-    let x = 1.414;
-    let y = 3.141;
-    let words = String::from(&quot;compare x and y&quot;);
-
-    show_max(&amp;y, &amp;x);
-    println!(&quot;first word: {}&quot;, first_word(&amp;words));
-    println!(&quot;max is {}&quot;, ref_max(&amp;y, &amp;x));
-}</code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="traits.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
+                            <a rel="next prefetch" href="lifetimes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -461,7 +236,13 @@ fn main() {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="traits.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
+                    <a rel="next prefetch" href="lifetimes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
@@ -484,11 +265,6 @@ fn main() {
 
         <!-- Custom JS scripts -->
 
-        <script>
-        window.addEventListener('load', function() {
-            window.setTimeout(window.print, 100);
-        });
-        </script>
 
     </div>
     </body>
