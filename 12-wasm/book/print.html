@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Web Assembly</title>
+        <title>Web Development</title>
         <meta name="robots" content="noindex">
 
 
@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="wasm.html"><strong aria-hidden="true">1.</strong> Web Assembly</a></li><li class="chapter-item expanded "><a href="sexpr.html"><strong aria-hidden="true">2.</strong> S-expressions</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">3.</strong> Rust and WASM</a></li><li class="chapter-item expanded "><a href="bindgen.html"><strong aria-hidden="true">4.</strong> wasm-pack</a></li><li class="chapter-item expanded "><a href="gol-copy.html"><strong aria-hidden="true">5.</strong> Simple Game of Life</a></li><li class="chapter-item expanded "><a href="gol-direct.html"><strong aria-hidden="true">6.</strong> Better Game of Life</a></li><li class="chapter-item expanded "><a href="interop.html"><strong aria-hidden="true">7.</strong> Interoperability</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="www.html"><strong aria-hidden="true">1.</strong> The World Wide Web</a></li><li class="chapter-item expanded "><a href="web-apis.html"><strong aria-hidden="true">2.</strong> Web APIs</a></li><li class="chapter-item expanded "><a href="wasm.html"><strong aria-hidden="true">3.</strong> Web Assembly</a></li><li class="chapter-item expanded "><a href="sexpr.html"><strong aria-hidden="true">4.</strong> S-expressions</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">5.</strong> Rust and WASM</a></li><li class="chapter-item expanded "><a href="bindgen.html"><strong aria-hidden="true">6.</strong> wasm-pack</a></li><li class="chapter-item expanded "><a href="gol-copy.html"><strong aria-hidden="true">7.</strong> Simple Game of Life</a></li><li class="chapter-item expanded "><a href="gol-direct.html"><strong aria-hidden="true">8.</strong> Better Game of Life</a></li><li class="chapter-item expanded "><a href="interop.html"><strong aria-hidden="true">9.</strong> Interoperability</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -142,7 +142,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">Web Assembly</h1>
+                    <h1 class="menu-title">Web Development</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -174,7 +174,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="what-is-webassembly"><a class="header" href="#what-is-webassembly">What is WebAssembly</a></h1>
+                        <h1 id="web-development"><a class="header" href="#web-development">Web Development</a></h1>
 <p>Standard web technologies include three levels:</p>
 <ul>
 <li><a href="https://developer.mozilla.org/en-US/docs/Learn/HTML">HTML</a> - defines the structure of a web page</li>
@@ -184,6 +184,209 @@
 <p>These technologies are ubiquitous across the web. Every web browser has a
 JavaScript interpreter built into it and many have JIT compilers to optimize
 the code as it runs.</p>
+<h2 id="hyper-text-markup-language"><a class="header" href="#hyper-text-markup-language">Hyper Text Markup Language</a></h2>
+<p>HTML is a <em>markup language</em>, similar to <a href="https://developer.mozilla.org/en-US/docs/Glossary/XML">XML</a> that describes the structure and layout of a web page.</p>
+<p>A browser represents an HTML document using a
+<a href="https://developer.mozilla.org/en-US/docs/Glossary/DOM">DOM</a>(Domain Object Model)
+which is structured as a tree of nodes (a <a href="https://www.w3schools.com/Js/js_htmldom.asp">DOM tree</a>), where each node defines
+part of the document, usually an <a href="https://developer.mozilla.org/en-US/docs/Glossary/Element">element</a>.</p>
+<pre><code class="language-html">&lt;!doctype html&gt;
+&lt;!-- Each element starts with a tag, and may include space separated attributes.
+     The content of the element is between the start and close tags. --&gt;
+&lt;html lang=&quot;en-US&quot;&gt;
+  &lt;!-- the head contains metadata that is not displayed --&gt; 
+  &lt;head&gt;
+    &lt;!-- a void element has no content, and therefore no separate closing tag --&gt;
+    &lt;meta charset=&quot;utf-8&quot; /&gt;
+    &lt;title&gt;My test page&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;!-- the body describes the layout/content of the page --&gt;
+  &lt;body&gt;
+    &lt;p&gt;This is my page&lt;/p&gt;
+  &lt;/body&gt;
+  &lt;!-- closing tag for the html element --&gt;
+&lt;/html&gt;
+</code></pre>
+<p>A good resource for learning <a href="https://www.w3schools.com/html/default.asp">HTML</a></p>
+<h2 id="cascading-style-sheets"><a class="header" href="#cascading-style-sheets">Cascading Style Sheets</a></h2>
+<p>CSS is a stylesheet language used to describe the presentation or rendering of
+a document written in HTML or XML (including
+<a href="https://developer.mozilla.org/en-US/docs/Web/SVG">SVG</a> and
+<a href="https://developer.mozilla.org/en-US/docs/Web/MathML">MathML</a>).</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;style&gt;
+/* The &lt;selector&gt; is the HTML element tag. Note declarations are name':'value */
+body {
+  background-color: lightblue;
+}
+
+h1 {
+  color: white;
+  text-align: center;
+}
+
+/* The period (.) begins a class selector */
+.p1 {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.p2 {
+  font-family: &quot;Lucida Console&quot;, &quot;Courier New&quot;, monospace;
+}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;h1&gt;CSS font-family&lt;/h1&gt;
+&lt;p class=&quot;p1&quot;&gt;This is a paragraph, shown in the Arial font.&lt;/p&gt;
+&lt;p class=&quot;p2&quot;&gt;This is a paragraph, shown in the Lucida Console font.&lt;/p&gt;
+
+&lt;!-- css can be in-line or in an external file, as well --&gt;
+&lt;p style=&quot;font-size:30px&quot;&gt;Much larger&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>A good resource for learning <a href="https://www.w3schools.com/css/default.asp">CSS</a></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="javascript"><a class="header" href="#javascript">JavaScript</a></h1>
+<p>All web browsers contain a JavaScript execution environment to run scripts
+that program the dynamic behavior of web pages.
+Example behaviors are accepting user input or recognizing a button press.</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;body&gt;
+
+&lt;h2&gt;What Can JavaScript Do?&lt;/h2&gt;
+
+&lt;p&gt;JavaScript can change HTML attribute values.&lt;/p&gt;
+
+&lt;p&gt;In this case JavaScript changes the value of the src (source) attribute of an image.&lt;/p&gt;
+
+&lt;button onclick=&quot;document.getElementById('myImage').src='pic_bulbon.gif'&quot;&gt;Turn on the light&lt;/button&gt;
+
+&lt;img id=&quot;myImage&quot; src=&quot;pic_bulboff.gif&quot; style=&quot;width:100px&quot;&gt;
+
+&lt;button onclick=&quot;document.getElementById('myImage').src='pic_bulboff.gif'&quot;&gt;Turn off the light&lt;/button&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>Try it <a href="https://www.w3schools.com/js/js_intro.asp">here</a></p>
+<p>In this example, <code>button</code> is an HTML element, and <code>onclick</code> is the Javascript
+code that is called when the button is pressed.</p>
+<p>The callback code accesses the element with <code>id=&quot;myImage&quot;</code> and changes the <code>src</code>
+field of the struct.</p>
+<h2 id="web-apis"><a class="header" href="#web-apis">Web APIs</a></h2>
+<p>The browser runtime environments are <em>sandboxed</em>, which means the scripts
+access to the host environment is carefully controlled. However, the scripts
+do have access to the Web APIs in the runtime environment, and this is how all
+the work gets done.</p>
+<img src="img/JS_runtime_4.png" alt="browser runtime">
+<p>From: [https://www.freecodecamp.org/news/javascript-engine-and-runtime-explained/]</p>
+<h3 id="exploring-web-apis"><a class="header" href="#exploring-web-apis">Exploring Web APIs</a></h3>
+<p>Let's explore the <code>canvas</code> and <code>img</code> elements.</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;body&gt;
+    &lt;canvas id=&quot;myCanvas&quot; width=&quot;400&quot; height=&quot;200&quot; style=&quot;border:1px solid #000000;&quot;&gt;
+      Your browser does not support the HTML canvas tag.
+    &lt;/canvas&gt;
+
+    &lt;script&gt;
+      var canvas = document.getElementById(&quot;myCanvas&quot;);
+      var context = canvas.getContext(&quot;2d&quot;);
+
+      context.fillStyle = &quot;blue&quot;;
+      context.strokeRect(10, 10, canvas.width-10, canvas.height-10);
+
+      canvas.addEventListener('click', clickReporter, false);
+
+      function clickReporter(event) {
+          const rect = canvas.getBoundingClientRect()
+          const x = event.clientX - rect.left
+          const y = event.clientY - rect.top
+          console.log(&quot;x: &quot; + x + &quot; y: &quot; + y)
+      }
+
+      canvas.addEventListener('click', clickReporter, false);
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>The canvas looks like it could be useful. Let's try to load some images:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;body&gt;
+    &lt;script&gt;
+      var CardNames = ['images/ace_of_clubs.png',
+                 'images/6_of_clubs.png',
+                 'images/jack_of_clubs.png',
+                 'images/king_of_clubs.png'
+                ];
+
+      CardNames.forEach(function(path) {
+          var img = document.createElement('img');
+          img.src = path;
+          img.alt = path;
+          document.body.appendChild(img);
+      });      
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>Hmm, the cards look good, but they're too big. Let's try to scale them down.</p>
+<pre><code class="language-javascript">function resizeImage(image, maxSize) {
+    var icanvas = document.createElement('canvas');
+    var width = image.width;
+    var height = image.height;
+
+    // Calculate the new dimensions, maintaining the aspect ratio
+    if (height &gt; width) {
+        width *= maxSize / height;
+        height = maxSize;
+    }
+    else {
+        height *= maxSize / width;
+        width = maxSize;
+    }
+
+    // Set the canvas dimensions to the new dimensions
+    icanvas.width = width;
+    icanvas.height = height;
+
+    // Draw the resized image on the canvas
+    var ctx = icanvas.getContext('2d');
+
+    ctx.drawImage(image, 0, 0, width, height);
+
+    ctx.fillStyle = &quot;black&quot;;
+    ctx.strokeRect(0, 0, width-1, height-1);
+
+    document.body.appendChild(icanvas);
+}
+</code></pre>
+<p>Let's put the canvas and the image together:</p>
+<pre><code class="language-javascript">var canvas;
+var context;
+
+var Cards = new Array();
+var next = 0;
+
+function getCursorPosition(event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    console.log(&quot;x: &quot; + x + &quot; y: &quot; + y + &quot; next: &quot; + next);
+
+    context.drawImage(Cards[next], x, y);
+    next = next + 1;
+    if (next &gt;= 4) {
+        next = 0;
+    }
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="what-is-webassembly"><a class="header" href="#what-is-webassembly">What is WebAssembly</a></h1>
 <p><a href="https://webassembly.org">WebAssembly</a> is a binary instruction format for a
 stack-based virtual machine. <em>WASM</em> is designed as a portable compilation
 target for programming languages, enabling deployment on the web for client
@@ -607,7 +810,7 @@ impl fmt::Display for Universe {
 <p>The JavaScript for this version is simple because Rust is doing both the
 game logic and the rendering. However, we are serializing and copying the
 entire universe across the boundary on every tick!</p>
-<p>(from the <a href="https://rustwasm.github.io/docs/book/game-of-life/introduction.html">Rust and WebAssembly Tutorial</a></p>
+<p>(from the <a href="https://rustwasm.github.io/docs/book/game-of-life/introduction.html">Rust and WebAssembly Tutorial</a>)</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="better-game-of-life"><a class="header" href="#better-game-of-life">Better Game of Life</a></h1>
 <p>To avoid all the copying, this version will give JavaScript a pointer to the
 Universe, so that the next move is determined by Rust but the rendering is
@@ -683,10 +886,11 @@ rectangle:</p>
 </code></pre>
 <p>Now Rust is updating the game board and JavaScript is rendering it.
 This design reduces memory copying and lets each component do what it does best.</p>
-<p>(from the <a href="https://rustwasm.github.io/docs/book/game-of-life/introduction.html">Rust and WebAssembly Tutorial</a></p>
+<p>(from the <a href="https://rustwasm.github.io/docs/book/game-of-life/introduction.html">Rust and WebAssembly Tutorial</a>)</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="interoperability"><a class="header" href="#interoperability">Interoperability</a></h1>
 <p>Rust and JavaScript have a lot of types in common, and a lot that are different.</p>
 <p><a href="https://blog.logrocket.com/getting-started-with-webassembly-and-rust/#rustandjavascriptinterop">LogRocket</a> has a great overview of Rust-JavaScript interoperability.</p>
+<p>See also the <a href="https://rustwasm.github.io/docs/wasm-bindgen/introduction.html">wasm-bindgen Guide</a></p>
 
                     </main>
 
