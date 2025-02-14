@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="www.html"><strong aria-hidden="true">1.</strong> The World Wide Web</a></li><li class="chapter-item expanded "><a href="web-apis.html"><strong aria-hidden="true">2.</strong> Web APIs</a></li><li class="chapter-item expanded "><a href="wasm.html"><strong aria-hidden="true">3.</strong> Web Assembly</a></li><li class="chapter-item expanded "><a href="sexpr.html"><strong aria-hidden="true">4.</strong> S-expressions</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">5.</strong> Rust and WASM</a></li><li class="chapter-item expanded "><a href="bindgen.html"><strong aria-hidden="true">6.</strong> wasm-pack</a></li><li class="chapter-item expanded "><a href="gol-copy.html"><strong aria-hidden="true">7.</strong> Simple Game of Life</a></li><li class="chapter-item expanded "><a href="gol-direct.html"><strong aria-hidden="true">8.</strong> Better Game of Life</a></li><li class="chapter-item expanded "><a href="interop.html"><strong aria-hidden="true">9.</strong> Interoperability</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="www.html"><strong aria-hidden="true">1.</strong> The World Wide Web</a></li><li class="chapter-item expanded "><a href="web-apis.html"><strong aria-hidden="true">2.</strong> Web APIs</a></li><li class="chapter-item expanded "><a href="server.html"><strong aria-hidden="true">3.</strong> Web Servers</a></li><li class="chapter-item expanded "><a href="wasm.html"><strong aria-hidden="true">4.</strong> Web Assembly</a></li><li class="chapter-item expanded "><a href="sexpr.html"><strong aria-hidden="true">5.</strong> S-expressions</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">6.</strong> Rust and WASM</a></li><li class="chapter-item expanded "><a href="bindgen.html"><strong aria-hidden="true">7.</strong> wasm-pack</a></li><li class="chapter-item expanded "><a href="gol-copy.html"><strong aria-hidden="true">8.</strong> Simple Game of Life</a></li><li class="chapter-item expanded "><a href="gol-direct.html"><strong aria-hidden="true">9.</strong> Better Game of Life</a></li><li class="chapter-item expanded "><a href="interop.html"><strong aria-hidden="true">10.</strong> Interoperability</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -386,6 +386,127 @@ function getCursorPosition(event) {
     }
 }
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="web-servers"><a class="header" href="#web-servers">Web Servers</a></h1>
+<p>Most web browsers get the content they display from servers:</p>
+<img src="img/fetching-a-page.svg" alt="client server communication" />
+<p>The communication is almost universally done using <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Overview">HTTP</a>, which is a message based client-server
+protocol.</p>
+<h2 id="http-messages"><a class="header" href="#http-messages">HTTP Messages</a></h2>
+<p>Although HTTP is not connection based, it is typically used on TCP, which has
+convenient reliability guarantees. Originally, HTTP/1.0 opened a separate
+connection for every request/response pair. This turned out to be very slow
+because it takes several round-trips to establish a connection. HTTP/2
+multiplexes many messages over a single TCP connection.</p>
+<img src="img/http-message-anatomy.svg" alt="http message format" />
+<p>There are only a few <em>request methods</em> or <em>verbs</em>:</p>
+<dl>
+  <dt>GET/HEAD</dt>
+    <dd>- requests data from the server. HEAD asks for the metadata only.</dd>
+  <dt>POST</dt>
+    <dd>- sends data to the server. PUT seems to be similar.</dd>
+  <dt>DELETE</dt>
+    <dd>- removes a resource from the server.</dd>
+  <dt>PATCH</dt>
+    <dd>- partial modifications to a resource at the server.</dd>
+</dl>
+<p>HTTP is extensible and flexible, and has lots of support packages for both
+client and server implementations.</p>
+<h2 id="rocket"><a class="header" href="#rocket">Rocket</a></h2>
+<p><a href="https://crates.io/crates/rocket">Rocket</a> is an async web framework for Rust.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">#[macro_use] extern crate rocket;
+</span><span class="boring">
+</span><span class="boring">#[cfg(test)] mod tests;
+</span><span class="boring">
+</span><span class="boring">#[derive(FromFormField)]
+</span><span class="boring">enum Lang {
+</span><span class="boring">    #[field(value = &quot;en&quot;)]
+</span><span class="boring">    English,
+</span><span class="boring">    #[field(value = &quot;ru&quot;)]
+</span><span class="boring">    #[field(value = &quot;ру&quot;)]
+</span><span class="boring">    Russian
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">#[derive(FromForm)]
+</span><span class="boring">struct Options&lt;'r&gt; {
+</span><span class="boring">    emoji: bool,
+</span><span class="boring">    name: Option&lt;&amp;'r str&gt;,
+</span><span class="boring">}
+</span><span class="boring">
+</span>// Try visiting:
+//   http://127.0.0.1:8000/hello/world
+#[get(&quot;/world&quot;)]
+fn world() -&gt; &amp;'static str {
+    &quot;Hello, world!&quot;
+}
+
+// Try visiting:
+//   http://127.0.0.1:8000/hello/мир
+#[get(&quot;/мир&quot;)]
+fn mir() -&gt; &amp;'static str {
+    &quot;Привет, мир!&quot;
+}
+
+// Try visiting:
+//   http://127.0.0.1:8000/wave/Rocketeer/100
+#[get(&quot;/&lt;name&gt;/&lt;age&gt;&quot;, rank = 2)]
+fn wave(name: &amp;str, age: u8) -&gt; String {
+    format!(&quot;👋 Hello, {} year old named {}!&quot;, age, name)
+}
+<span class="boring">
+</span><span class="boring">// Note: without the `..` in `opt..`, we'd need to pass `opt.emoji`, `opt.name`.
+</span><span class="boring">//
+</span><span class="boring">// Try visiting:
+</span><span class="boring">//   http://127.0.0.1:8000/?emoji
+</span><span class="boring">//   http://127.0.0.1:8000/?name=Rocketeer
+</span><span class="boring">//   http://127.0.0.1:8000/?lang=ру
+</span><span class="boring">//   http://127.0.0.1:8000/?lang=ру&amp;emoji
+</span><span class="boring">//   http://127.0.0.1:8000/?emoji&amp;lang=en
+</span><span class="boring">//   http://127.0.0.1:8000/?name=Rocketeer&amp;lang=en
+</span><span class="boring">//   http://127.0.0.1:8000/?emoji&amp;name=Rocketeer
+</span><span class="boring">//   http://127.0.0.1:8000/?name=Rocketeer&amp;lang=en&amp;emoji
+</span><span class="boring">//   http://127.0.0.1:8000/?lang=ru&amp;emoji&amp;name=Rocketeer
+</span><span class="boring">#[get(&quot;/?&lt;lang&gt;&amp;&lt;opt..&gt;&quot;)]
+</span><span class="boring">fn hello(lang: Option&lt;Lang&gt;, opt: Options&lt;'_&gt;) -&gt; String {
+</span><span class="boring">    let mut greeting = String::new();
+</span><span class="boring">    if opt.emoji {
+</span><span class="boring">        greeting.push_str(&quot;👋 &quot;);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    match lang {
+</span><span class="boring">        Some(Lang::Russian) =&gt; greeting.push_str(&quot;Привет&quot;),
+</span><span class="boring">        Some(Lang::English) =&gt; greeting.push_str(&quot;Hello&quot;),
+</span><span class="boring">        None =&gt; greeting.push_str(&quot;Hi&quot;),
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    if let Some(name) = opt.name {
+</span><span class="boring">        greeting.push_str(&quot;, &quot;);
+</span><span class="boring">        greeting.push_str(name);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    greeting.push('!');
+</span><span class="boring">    greeting
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">#[launch]
+</span><span class="boring">fn rocket() -&gt; _ {
+</span><span class="boring">    rocket::build()
+</span><span class="boring">        .mount(&quot;/&quot;, routes![hello])
+</span><span class="boring">        .mount(&quot;/hello&quot;, routes![world, mir])
+</span><span class="boring">        .mount(&quot;/wave&quot;, routes![wave])
+</span><span class="boring">}
+</span><span class="boring">}</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[launch]
+fn rocket() -&gt; _ {
+    rocket::build()
+        .mount(&quot;/&quot;, routes![hello])
+        .mount(&quot;/hello&quot;, routes![world, mir])
+        .mount(&quot;/wave&quot;, routes![wave])
+}
+<span class="boring">}</span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="what-is-webassembly"><a class="header" href="#what-is-webassembly">What is WebAssembly</a></h1>
 <p><a href="https://webassembly.org">WebAssembly</a> is a binary instruction format for a
 stack-based virtual machine. <em>WASM</em> is designed as a portable compilation
