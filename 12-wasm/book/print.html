@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="www.html"><strong aria-hidden="true">1.</strong> The World Wide Web</a></li><li class="chapter-item expanded "><a href="web-apis.html"><strong aria-hidden="true">2.</strong> Web APIs</a></li><li class="chapter-item expanded "><a href="server.html"><strong aria-hidden="true">3.</strong> Web Servers</a></li><li class="chapter-item expanded "><a href="wasm.html"><strong aria-hidden="true">4.</strong> Web Assembly</a></li><li class="chapter-item expanded "><a href="sexpr.html"><strong aria-hidden="true">5.</strong> S-expressions</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">6.</strong> Rust and WASM</a></li><li class="chapter-item expanded "><a href="bindgen.html"><strong aria-hidden="true">7.</strong> wasm-pack</a></li><li class="chapter-item expanded "><a href="gol-copy.html"><strong aria-hidden="true">8.</strong> Simple Game of Life</a></li><li class="chapter-item expanded "><a href="gol-direct.html"><strong aria-hidden="true">9.</strong> Better Game of Life</a></li><li class="chapter-item expanded "><a href="interop.html"><strong aria-hidden="true">10.</strong> Interoperability</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="www.html"><strong aria-hidden="true">1.</strong> The World Wide Web</a></li><li class="chapter-item expanded "><a href="web-apis.html"><strong aria-hidden="true">2.</strong> Web APIs</a></li><li class="chapter-item expanded "><a href="server.html"><strong aria-hidden="true">3.</strong> Web Servers</a></li><li class="chapter-item expanded "><a href="full-stack.html"><strong aria-hidden="true">4.</strong> Full Stack Applications</a></li><li class="chapter-item expanded "><a href="wasm.html"><strong aria-hidden="true">5.</strong> Web Assembly</a></li><li class="chapter-item expanded "><a href="sexpr.html"><strong aria-hidden="true">6.</strong> S-expressions</a></li><li class="chapter-item expanded "><a href="rust.html"><strong aria-hidden="true">7.</strong> Rust and WASM</a></li><li class="chapter-item expanded "><a href="bindgen.html"><strong aria-hidden="true">8.</strong> wasm-pack</a></li><li class="chapter-item expanded "><a href="gol-copy.html"><strong aria-hidden="true">9.</strong> Simple Game of Life</a></li><li class="chapter-item expanded "><a href="gol-direct.html"><strong aria-hidden="true">10.</strong> Better Game of Life</a></li><li class="chapter-item expanded "><a href="interop.html"><strong aria-hidden="true">11.</strong> Interoperability</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -507,6 +507,379 @@ fn rocket() -&gt; _ {
         .mount(&quot;/wave&quot;, routes![wave])
 }
 <span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="full-stack-applications"><a class="header" href="#full-stack-applications">Full-stack Applications</a></h1>
+<p>So far we have just loaded our front-end applications into the browser as files.
+We have also seen how to get content from the back-end by visiting a route that
+it serves.</p>
+<p>A <em>full-stack</em> application loads the front-end content from a back-end server.</p>
+<h2 id="an-example-application"><a class="header" href="#an-example-application">An Example Application</a></h2>
+<pre><code class="language-javascript">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;body&gt;
+
+    &lt;h2&gt;Tachometer&lt;/h2&gt;
+
+    &lt;div&gt;
+    &lt;svg width=&quot;500&quot; height=&quot;400&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;
+      &lt;defs&gt;
+        &lt;clipPath id=&quot;cut-bottom&quot;&gt;
+          &lt;rect x=&quot;0&quot; y=&quot;0&quot; width=&quot;500&quot; height=&quot;200&quot; /&gt;
+        &lt;/clipPath&gt;
+        &lt;marker id=&quot;arrow&quot; markerWidth=&quot;10&quot; markerHeight=&quot;10&quot; refX=&quot;5&quot; refY=&quot;5&quot; orient=&quot;auto&quot;&gt;
+          &lt;path d=&quot;M 0 0 L 10 5 L 0 10 z&quot; fill=&quot;black&quot; /&gt;
+      &lt;/marker&gt;  &lt;/defs&gt;
+      &lt;circle cx=&quot;250&quot; cy=&quot;200&quot; r=&quot;200&quot; fill=&quot;red&quot; clip-path=&quot;url(#cut-bottom)&quot; /&gt;
+      &lt;circle cx=&quot;250&quot; cy=&quot;200&quot; r=&quot;150&quot; fill=&quot;yellow&quot; clip-path=&quot;url(#cut-bottom)&quot; /&gt;
+      &lt;line id=&quot;line&quot; x1=&quot;250&quot; y1=&quot;200&quot; x2=&quot;250&quot; y2=&quot;60&quot; stroke=&quot;black&quot; stroke-width=&quot;5&quot;
+            marker-end=&quot;url(#arrow)&quot; clip-path=&quot;url(#cut-bottom)&quot; /&gt;
+      Sorry, your browser does not support inline SVG.
+    &lt;/svg&gt;
+  &lt;/div&gt;
+
+  &lt;script&gt;
+    const numbox = document.getElementById(&quot;numbox&quot;);
+    const pointer = document.getElementById(&quot;line&quot;);
+    var iid = null;
+
+    var next = 1;
+    var dir = 1;
+
+    window.onload = function() {
+        clearInterval(iid);
+        iid = setInterval(pollServer, 200);
+    }
+
+    function pollServer() {
+        fetch('data/rpm', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+            },
+        })
+            .then(response =&gt; response.text())
+            .then(text =&gt; updateTach(text))
+    }
+
+    function pollNext() {
+        next = next + dir;
+        if (next &gt;= 100) {
+            dir = -1;
+        }
+        else if (next &lt;= 0) {
+            dir = 1;
+        }
+        updateTach(next);
+    }
+
+    function updateTach(text) {
+        var percent = Number(text)*1.0/100.0;
+        var [px, py] = plotPercent(percent);
+        pointer.setAttribute(&quot;x2&quot;, px);
+        pointer.setAttribute(&quot;y2&quot;, py);
+    }
+    
+    const RADIUS = 150.0;
+    const XORIGIN = 250.0;
+    const YORIGIN = 200.0;
+
+    function plotPercent(percent) {
+        var radians = percent*Math.PI;
+        var unitx = Math.cos(radians);
+        var unity = Math.sin(radians);
+
+        return [XORIGIN - unitx * RADIUS, YORIGIN - unity * RADIUS];
+    }
+        
+  &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>The back-end is providing the RPM data to the client at the <code>data/rpm</code> route.
+Because the back-end is not fenced, it can get that data by reading it from an
+external device. To serve the data to the front-end the back-end is structured
+as follows:</p>
+<pre><code>back-end/
+|-- src/
+|   '-- main.rs
+'-- static/
+    '-- index.html
+</code></pre>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[launch]
+async fn rocket() -&gt; _ {
+    rocket::build()
+        .mount(&quot;/data&quot;, routes![rpm])
+        .mount(&quot;/&quot;, FileServer::from(relative!(&quot;static&quot;)))
+}
+<span class="boring">}</span></code></pre></pre>
+<h2 id="using-yew"><a class="header" href="#using-yew">Using Yew</a></h2>
+<p>Yew allows client-side code development in Rust by using <code>wasm-bindgen</code> to
+generate Web Assembly.</p>
+<p>The <code>html!</code> macro allows you to write mostly normal HTML that uses Rust
+variables. Here is the SVG diagram converted from Javascript to Yew:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use yew::prelude::*;
+</span><span class="boring">use gloo_net::http::Request;
+</span><span class="boring">use yew_hooks::use_interval;
+</span><span class="boring">use log::{info, warn};
+</span><span class="boring">use std::f64::consts::PI;
+</span><span class="boring">
+</span><span class="boring">#[function_component(App)]
+</span><span class="boring">fn app() -&gt; Html {
+</span><span class="boring">    html! {
+</span><span class="boring">        &lt;&gt;
+</span><span class="boring">            &lt;h1&gt;{ &quot;Tachometer&quot; }&lt;/h1&gt;
+</span><span class="boring">            &lt;div&gt;
+</span><span class="boring">            &lt;Tachometer width={500} height={400} /&gt;  
+</span><span class="boring">            &lt;/div&gt;
+</span><span class="boring">            &lt;Poll /&gt;
+</span><span class="boring">       &lt;/&gt;
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">#[function_component(Periodic)]
+</span><span class="boring">fn periodic() -&gt; Html {
+</span><span class="boring">    let counter = use_state(|| 1);
+</span><span class="boring">
+</span><span class="boring">    {
+</span><span class="boring">        let num = counter.clone();
+</span><span class="boring">	    use_interval(move || {
+</span><span class="boring">            update_tach(format!(&quot;{}&quot;, *num));
+</span><span class="boring">	        if *num &gt;= 100 {
+</span><span class="boring">	            num.set(1);
+</span><span class="boring">	        }
+</span><span class="boring">	        else {
+</span><span class="boring">                num.set(*num + 1);
+</span><span class="boring">	        }
+</span><span class="boring">	        info!(&quot;interval {}&quot;, *num);
+</span><span class="boring">   	    }, 1000);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    html! {
+</span><span class="boring">        &lt;div&gt;&lt;/div&gt;
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">#[function_component(Poll)]
+</span><span class="boring">fn poll() -&gt; Html {
+</span><span class="boring">	use_interval(move || {
+</span><span class="boring">        wasm_bindgen_futures::spawn_local(async move {
+</span><span class="boring">            let response = Request::get(&quot;data/rpm&quot;)
+</span><span class="boring">                .send().await.unwrap()
+</span><span class="boring">                .text().await.unwrap();
+</span><span class="boring">
+</span><span class="boring">            update_tach(response);
+</span><span class="boring">        });
+</span><span class="boring">   	}, 1000);
+</span><span class="boring">
+</span><span class="boring">    html! {
+</span><span class="boring">        &lt;div&gt;&lt;/div&gt;
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span>#[derive(Properties, PartialEq)]
+struct TachProperties {
+    width: u32,
+    height: u32,
+}
+
+#[function_component(Tachometer)]
+fn tachometer(props: &amp;TachProperties) -&gt; Html {
+    let w = format!(&quot;{}&quot;, props.width);
+    let h = format!(&quot;{}&quot;, props.height);
+    let halfw = format!(&quot;{}&quot;, props.width/2);
+    let halfh = format!(&quot;{}&quot;, props.height/2);
+    let thirdh = format!(&quot;{}&quot;, props.height/3);
+    html! {
+        &lt;svg width={w.clone()} height={h.clone()} xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;
+            &lt;defs&gt;
+                &lt;@{&quot;clipPath&quot;} id=&quot;cut-bottom&quot;&gt;
+                    &lt;rect x=&quot;0&quot; y=&quot;0&quot; width={w.clone()} height={halfh.clone()} /&gt;
+                &lt;/@&gt;
+                &lt;marker id=&quot;arrow&quot; markerWidth=&quot;10&quot; markerHeight=&quot;10&quot;
+                    refX=&quot;5&quot; refY=&quot;5&quot; orient=&quot;auto&quot;&gt;
+                    &lt;path d=&quot;M 0 0 L 10 5 L 0 10 z&quot; fill=&quot;black&quot; /&gt;
+                &lt;/marker&gt;
+            &lt;/defs&gt;
+            &lt;circle cx={halfw.clone()} cy={halfh.clone()} r={halfh.clone()}
+                fill=&quot;red&quot; clip-path=&quot;url(#cut-bottom)&quot; /&gt;
+            &lt;circle cx={halfw.clone()} cy={halfh.clone()} r={thirdh.clone()}
+                fill=&quot;yellow&quot; clip-path=&quot;url(#cut-bottom)&quot; /&gt;
+            &lt;line id=&quot;line&quot; x1={halfw.clone()} y1={halfh.clone()} x2={halfw.clone()} y2=&quot;60&quot; stroke=&quot;black&quot; stroke-width=&quot;5&quot;
+                marker-end=&quot;url(#arrow)&quot; /&gt;
+            { &quot;Sorry, your browser does not support inline SVG.&quot; }
+        &lt;/svg&gt;
+    }
+}
+
+fn update_tach(text: String) {
+    let percent = match text.parse::&lt;u32&gt;() {
+        Ok(val) =&gt; val,
+        Err(e) =&gt; {
+            warn!(&quot;can't parse &lt;{}&gt;: {}&quot;, text, e);
+            return;
+        },
+    };
+    let (px, py) = plot_percent((percent as f64)/100.0);
+
+    let document = web_sys::window().unwrap().document().unwrap();
+    let pointer = document.get_element_by_id(&quot;line&quot;).unwrap();
+
+    pointer.set_attribute(&quot;x2&quot;, &amp;format!(&quot;{}&quot;, px)).unwrap();
+    pointer.set_attribute(&quot;y2&quot;, &amp;format!(&quot;{}&quot;, py)).unwrap();
+    info!(&quot;px: {}, py: {}&quot;, px, py);
+}
+<span class="boring">
+</span><span class="boring">const RADIUS: f64 = 150.0;
+</span><span class="boring">const XORIGIN: f64 = 250.0;
+</span><span class="boring">const YORIGIN: f64 = 200.0;
+</span><span class="boring">
+</span><span class="boring">fn plot_percent(percent: f64) -&gt; (f64, f64) {
+</span><span class="boring">    let radians = percent*PI;
+</span><span class="boring">    let unitx = radians.cos();
+</span><span class="boring">    let unity = radians.sin();
+</span><span class="boring">
+</span><span class="boring">    (XORIGIN - unitx * RADIUS, YORIGIN - unity * RADIUS)
+</span><span class="boring">}
+</span><span class="boring">        
+</span><span class="boring">fn main() {
+</span><span class="boring">    wasm_logger::init(wasm_logger::Config::default());
+</span><span class="boring">    
+</span><span class="boring">    yew::Renderer::&lt;App&gt;::new().render();
+</span><span class="boring">}</span></code></pre></pre>
+<p>And here is the <code>fetch</code> loop:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">use yew::prelude::*;
+</span><span class="boring">use gloo_net::http::Request;
+</span><span class="boring">use yew_hooks::use_interval;
+</span><span class="boring">use log::{info, warn};
+</span><span class="boring">use std::f64::consts::PI;
+</span><span class="boring">
+</span><span class="boring">#[function_component(App)]
+</span><span class="boring">fn app() -&gt; Html {
+</span><span class="boring">    html! {
+</span><span class="boring">        &lt;&gt;
+</span><span class="boring">            &lt;h1&gt;{ &quot;Tachometer&quot; }&lt;/h1&gt;
+</span><span class="boring">            &lt;div&gt;
+</span><span class="boring">            &lt;Tachometer width={500} height={400} /&gt;  
+</span><span class="boring">            &lt;/div&gt;
+</span><span class="boring">            &lt;Poll /&gt;
+</span><span class="boring">       &lt;/&gt;
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">#[function_component(Periodic)]
+</span><span class="boring">fn periodic() -&gt; Html {
+</span><span class="boring">    let counter = use_state(|| 1);
+</span><span class="boring">
+</span><span class="boring">    {
+</span><span class="boring">        let num = counter.clone();
+</span><span class="boring">	    use_interval(move || {
+</span><span class="boring">            update_tach(format!(&quot;{}&quot;, *num));
+</span><span class="boring">	        if *num &gt;= 100 {
+</span><span class="boring">	            num.set(1);
+</span><span class="boring">	        }
+</span><span class="boring">	        else {
+</span><span class="boring">                num.set(*num + 1);
+</span><span class="boring">	        }
+</span><span class="boring">	        info!(&quot;interval {}&quot;, *num);
+</span><span class="boring">   	    }, 1000);
+</span><span class="boring">    }
+</span><span class="boring">
+</span><span class="boring">    html! {
+</span><span class="boring">        &lt;div&gt;&lt;/div&gt;
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span>#[function_component(Poll)]
+fn poll() -&gt; Html {
+	use_interval(move || {
+        wasm_bindgen_futures::spawn_local(async move {
+            let response = Request::get(&quot;data/rpm&quot;)
+                .send().await.unwrap()
+                .text().await.unwrap();
+
+            update_tach(response);
+        });
+   	}, 1000);
+
+    html! {
+        &lt;div&gt;&lt;/div&gt;
+    }
+}
+<span class="boring">
+</span><span class="boring">#[derive(Properties, PartialEq)]
+</span><span class="boring">struct TachProperties {
+</span><span class="boring">    width: u32,
+</span><span class="boring">    height: u32,
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">#[function_component(Tachometer)]
+</span><span class="boring">fn tachometer(props: &amp;TachProperties) -&gt; Html {
+</span><span class="boring">    let w = format!(&quot;{}&quot;, props.width);
+</span><span class="boring">    let h = format!(&quot;{}&quot;, props.height);
+</span><span class="boring">    let halfw = format!(&quot;{}&quot;, props.width/2);
+</span><span class="boring">    let halfh = format!(&quot;{}&quot;, props.height/2);
+</span><span class="boring">    let thirdh = format!(&quot;{}&quot;, props.height/3);
+</span><span class="boring">    html! {
+</span><span class="boring">        &lt;svg width={w.clone()} height={h.clone()} xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;
+</span><span class="boring">            &lt;defs&gt;
+</span><span class="boring">                &lt;@{&quot;clipPath&quot;} id=&quot;cut-bottom&quot;&gt;
+</span><span class="boring">                    &lt;rect x=&quot;0&quot; y=&quot;0&quot; width={w.clone()} height={halfh.clone()} /&gt;
+</span><span class="boring">                &lt;/@&gt;
+</span><span class="boring">                &lt;marker id=&quot;arrow&quot; markerWidth=&quot;10&quot; markerHeight=&quot;10&quot;
+</span><span class="boring">                    refX=&quot;5&quot; refY=&quot;5&quot; orient=&quot;auto&quot;&gt;
+</span><span class="boring">                    &lt;path d=&quot;M 0 0 L 10 5 L 0 10 z&quot; fill=&quot;black&quot; /&gt;
+</span><span class="boring">                &lt;/marker&gt;
+</span><span class="boring">            &lt;/defs&gt;
+</span><span class="boring">            &lt;circle cx={halfw.clone()} cy={halfh.clone()} r={halfh.clone()}
+</span><span class="boring">                fill=&quot;red&quot; clip-path=&quot;url(#cut-bottom)&quot; /&gt;
+</span><span class="boring">            &lt;circle cx={halfw.clone()} cy={halfh.clone()} r={thirdh.clone()}
+</span><span class="boring">                fill=&quot;yellow&quot; clip-path=&quot;url(#cut-bottom)&quot; /&gt;
+</span><span class="boring">            &lt;line id=&quot;line&quot; x1={halfw.clone()} y1={halfh.clone()} x2={halfw.clone()} y2=&quot;60&quot; stroke=&quot;black&quot; stroke-width=&quot;5&quot;
+</span><span class="boring">                marker-end=&quot;url(#arrow)&quot; /&gt;
+</span><span class="boring">            { &quot;Sorry, your browser does not support inline SVG.&quot; }
+</span><span class="boring">        &lt;/svg&gt;
+</span><span class="boring">    }
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">fn update_tach(text: String) {
+</span><span class="boring">    let percent = match text.parse::&lt;u32&gt;() {
+</span><span class="boring">        Ok(val) =&gt; val,
+</span><span class="boring">        Err(e) =&gt; {
+</span><span class="boring">            warn!(&quot;can't parse &lt;{}&gt;: {}&quot;, text, e);
+</span><span class="boring">            return;
+</span><span class="boring">        },
+</span><span class="boring">    };
+</span><span class="boring">    let (px, py) = plot_percent((percent as f64)/100.0);
+</span><span class="boring">
+</span><span class="boring">    let document = web_sys::window().unwrap().document().unwrap();
+</span><span class="boring">    let pointer = document.get_element_by_id(&quot;line&quot;).unwrap();
+</span><span class="boring">
+</span><span class="boring">    pointer.set_attribute(&quot;x2&quot;, &amp;format!(&quot;{}&quot;, px)).unwrap();
+</span><span class="boring">    pointer.set_attribute(&quot;y2&quot;, &amp;format!(&quot;{}&quot;, py)).unwrap();
+</span><span class="boring">    info!(&quot;px: {}, py: {}&quot;, px, py);
+</span><span class="boring">}
+</span><span class="boring">
+</span><span class="boring">const RADIUS: f64 = 150.0;
+</span><span class="boring">const XORIGIN: f64 = 250.0;
+</span><span class="boring">const YORIGIN: f64 = 200.0;
+</span><span class="boring">
+</span><span class="boring">fn plot_percent(percent: f64) -&gt; (f64, f64) {
+</span><span class="boring">    let radians = percent*PI;
+</span><span class="boring">    let unitx = radians.cos();
+</span><span class="boring">    let unity = radians.sin();
+</span><span class="boring">
+</span><span class="boring">    (XORIGIN - unitx * RADIUS, YORIGIN - unity * RADIUS)
+</span><span class="boring">}
+</span><span class="boring">        
+</span><span class="boring">fn main() {
+</span><span class="boring">    wasm_logger::init(wasm_logger::Config::default());
+</span><span class="boring">    
+</span><span class="boring">    yew::Renderer::&lt;App&gt;::new().render();
+</span><span class="boring">}</span></code></pre></pre>
+<p>Note this is using the <code>use_</code> hook mechanism, which Yew borrowed from React.</p>
+<p>To get the Rocket back-end to use the Yew front-end generated WASM, it has to
+mount the front-end's <code>dist</code> directory on <code>/</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="what-is-webassembly"><a class="header" href="#what-is-webassembly">What is WebAssembly</a></h1>
 <p><a href="https://webassembly.org">WebAssembly</a> is a binary instruction format for a
 stack-based virtual machine. <em>WASM</em> is designed as a portable compilation
