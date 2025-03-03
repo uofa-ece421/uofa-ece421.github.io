@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title></title>
+        <title>Kernel Modules</title>
         <meta name="robots" content="noindex">
 
 
@@ -142,7 +142,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title"></h1>
+                    <h1 class="menu-title">Kernel Modules</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -357,12 +357,13 @@ Ubuntu 22.04.3 LTS \n \l
 </code></pre>
 <p>You will likely be asked to add some <code>deb-src</code> lines to <code>etc/apt/sources.list</code>.
 You can add them by uncommenting the ones that are already in the file - just
-be sure to rerun '<code>sudo apt update</code> afterwards.</p>
+be sure to rerun <code>sudo apt update</code> afterwards.</p>
 <p>To build the kernel you can generally just <code>cd</code> into the source directory and
 type <code>make</code>. If you want to see what configuration you're building, you can
 type <a href="https://en.wikipedia.org/wiki/Menuconfig#"><code>make menuconfig</code></a>:</p>
-<img src="img/menuconfig.jpg" alt="make menuconfig"><div style="break-before: page; page-break-before: always;"></div><h1 id="hello-world"><a class="header" href="#hello-world">Hello World</a></h1>
-<p>As a dynamically linked library, the module has to export some well-know
+<img src="img/menuconfig.jpg" alt="make menuconfig">
+<div style="break-before: page; page-break-before: always;"></div><h1 id="hello-world"><a class="header" href="#hello-world">Hello World</a></h1>
+<p>As a dynamically linked library, the module has to export some well-known
 symbols to <code>insmod</code> so the loader can relocate and resolve them. The loader will
 also have to resolve external kernel symbols the module imports.
 About the simplest module you can have is:</p>
