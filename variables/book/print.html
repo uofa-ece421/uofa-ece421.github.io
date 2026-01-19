@@ -202,6 +202,8 @@ In C this is legal (and common):</p>
 
     let everything = &quot;everything&quot;;
     let everything = everything.len();
+
+    println!(&quot;{} {}&quot;, lb, everything);
 }</code></pre></pre>
 <p>Note: there is one instance of <code>oz</code> and two instances of <code>lb</code></p>
 <ul>
@@ -227,6 +229,7 @@ In C this is legal (and common):</p>
 <li><code>usize</code>/<code>isize</code> width depends on the machine
 <ul>
 <li>used for indexing (similar to <code>size_t</code> in <em>C</em>)</li>
+<li>strings are encoded using UTF-8, so they can't be indexed easily</li>
 </ul>
 </li>
 <li><code>char</code> is a Unicode Scalar Value
@@ -269,7 +272,7 @@ fn main() {
 
     println!(&quot;index {0}, value of true {1}&quot;, index, bytebool);
 }</code></pre></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="primitve-compound-types"><a class="header" href="#primitve-compound-types">Primitve Compound Types</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="primitive-compound-types"><a class="header" href="#primitive-compound-types">Primitive Compound Types</a></h1>
 <p>Compound types can group multiple values into one type.
 Once declared, these primitive compound types have fixed size.</p>
 <h3 id="tuples"><a class="header" href="#tuples">Tuples</a></h3>
@@ -280,7 +283,7 @@ Once declared, these primitive compound types have fixed size.</p>
     // This is called destructuring
     let (i, f, b) = tup;
 
-    println!(&quot;The float value is {} = {}&quot;, f, tup.1);
+    println!(&quot;The float value is {:.2} = {:e}&quot;, f, tup.1);
 }</code></pre></pre>
 <h3 id="arrays"><a class="header" href="#arrays">Arrays</a></h3>
 <p>A comma separated list of the <em>same</em> type:</p>
@@ -293,8 +296,7 @@ Once declared, these primitive compound types have fixed size.</p>
     println!(&quot;index as expected: {}&quot;, specific[0]);
     println!(&quot;dbg pretty print: {:?}&quot;, repeat);
 }
-
-    </code></pre></pre>
+</code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="array-bounds-checking"><a class="header" href="#array-bounds-checking">Array Bounds Checking</a></h1>
 <p>Array bounds are checked at both compile and runtime</p>
 <pre><pre class="playground"><code class="language-rust">use std::io;
