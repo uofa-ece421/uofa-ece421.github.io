@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="ownership.html"><strong aria-hidden="true">1.</strong> Ownership</a></li><li class="chapter-item expanded "><a href="layout.html"><strong aria-hidden="true">2.</strong> Stack vs Heap</a></li><li class="chapter-item expanded "><a href="errors.html" class="active"><strong aria-hidden="true">3.</strong> Here there be Monsters</a></li><li class="chapter-item expanded "><a href="errors-exposed.html"><strong aria-hidden="true">4.</strong> Spot the errors</a></li><li class="chapter-item expanded "><a href="move-copy.html"><strong aria-hidden="true">5.</strong> Move vs Copy</a></li><li class="chapter-item expanded "><a href="func.html"><strong aria-hidden="true">6.</strong> Ownership and Functions</a></li><li class="chapter-item expanded "><a href="borrow.html"><strong aria-hidden="true">7.</strong> Borrowing</a></li><li class="chapter-item expanded "><a href="race.html"><strong aria-hidden="true">8.</strong> Race Conditions</a></li><li class="chapter-item expanded "><a href="slice.html"><strong aria-hidden="true">9.</strong> Slices</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="memory-management.html"><strong aria-hidden="true">1.</strong> Rust and Memory</a></li><li class="chapter-item expanded "><a href="layout.html"><strong aria-hidden="true">2.</strong> Stack vs Heap</a></li><li class="chapter-item expanded "><a href="errors.html" class="active"><strong aria-hidden="true">3.</strong> Here there be Monsters</a></li><li class="chapter-item expanded "><a href="errors-exposed.html"><strong aria-hidden="true">4.</strong> Spot the errors</a></li><li class="chapter-item expanded "><a href="ownership.html"><strong aria-hidden="true">5.</strong> Ownership</a></li><li class="chapter-item expanded "><a href="move-copy.html"><strong aria-hidden="true">6.</strong> Move vs Copy</a></li><li class="chapter-item expanded "><a href="func.html"><strong aria-hidden="true">7.</strong> Ownership and Functions</a></li><li class="chapter-item expanded "><a href="borrow.html"><strong aria-hidden="true">8.</strong> Borrowing</a></li><li class="chapter-item expanded "><a href="race.html"><strong aria-hidden="true">9.</strong> Race Conditions</a></li><li class="chapter-item expanded "><a href="slice.html"><strong aria-hidden="true">10.</strong> Slices</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -199,8 +199,8 @@ int main(int argc, char **argv) {
     int i=0;
     Foo *p = &amp;array[0];
 
-    while (i++ &lt;= N) {
-        (p++)-&gt;field = i;
+    while (i &lt;= N) {
+        (p++)-&gt;field = ++i;
     }
 
     done(p);

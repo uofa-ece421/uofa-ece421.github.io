@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="ownership.html"><strong aria-hidden="true">1.</strong> Ownership</a></li><li class="chapter-item expanded "><a href="layout.html"><strong aria-hidden="true">2.</strong> Stack vs Heap</a></li><li class="chapter-item expanded "><a href="errors.html"><strong aria-hidden="true">3.</strong> Here there be Monsters</a></li><li class="chapter-item expanded "><a href="errors-exposed.html"><strong aria-hidden="true">4.</strong> Spot the errors</a></li><li class="chapter-item expanded "><a href="move-copy.html"><strong aria-hidden="true">5.</strong> Move vs Copy</a></li><li class="chapter-item expanded "><a href="func.html"><strong aria-hidden="true">6.</strong> Ownership and Functions</a></li><li class="chapter-item expanded "><a href="borrow.html"><strong aria-hidden="true">7.</strong> Borrowing</a></li><li class="chapter-item expanded "><a href="race.html"><strong aria-hidden="true">8.</strong> Race Conditions</a></li><li class="chapter-item expanded "><a href="slice.html"><strong aria-hidden="true">9.</strong> Slices</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="memory-management.html"><strong aria-hidden="true">1.</strong> Rust and Memory</a></li><li class="chapter-item expanded "><a href="layout.html"><strong aria-hidden="true">2.</strong> Stack vs Heap</a></li><li class="chapter-item expanded "><a href="errors.html"><strong aria-hidden="true">3.</strong> Here there be Monsters</a></li><li class="chapter-item expanded "><a href="errors-exposed.html"><strong aria-hidden="true">4.</strong> Spot the errors</a></li><li class="chapter-item expanded "><a href="ownership.html"><strong aria-hidden="true">5.</strong> Ownership</a></li><li class="chapter-item expanded "><a href="move-copy.html"><strong aria-hidden="true">6.</strong> Move vs Copy</a></li><li class="chapter-item expanded "><a href="func.html"><strong aria-hidden="true">7.</strong> Ownership and Functions</a></li><li class="chapter-item expanded "><a href="borrow.html"><strong aria-hidden="true">8.</strong> Borrowing</a></li><li class="chapter-item expanded "><a href="race.html"><strong aria-hidden="true">9.</strong> Race Conditions</a></li><li class="chapter-item expanded "><a href="slice.html"><strong aria-hidden="true">10.</strong> Slices</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -174,21 +174,40 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="ownership"><a class="header" href="#ownership">Ownership</a></h1>
-<p>Ownership is the feature that allows Rust to make guarantees about memory
-safety and integrity without compromising performance.</p>
-<p>The famous <em>borrow checker</em> runs at compile time, and enforces Rust's ownership
-rules to ensure safe and fast access to data.</p>
-<h1 style="font-size: 4rem; color: #ff0000">
-<p style="text-align:center"><u>Ownership Rules</u></p>
-</h1>
-<h1 style="font-size: 3rem; color: #aa0000">
-<ul>
-<li>Every value has a variable called its <em>owner</em></li>
-<li>There is only one owner at a time</li>
-<li>When the owner's lifetime ends, the value is released</li>
-</ul>
-</h1>
+                        <h1 id="memory-safety-in-rust"><a class="header" href="#memory-safety-in-rust">Memory Safety in Rust</a></h1>
+<h3 id="how-do-we-usually-mess-up-memory"><a class="header" href="#how-do-we-usually-mess-up-memory">How do we usually mess up memory?</a></h3>
+<dl>
+  <dt>Leaks</dt>
+  <dd>"Forget" to free allocated memory, often by freeing data structures
+      that hold pointers without first freeing the pointers.
+      We can also "lose" the pointer, classically by allocating into a stack
+      pointer and returning from the function.</dd>
+  <dt>Double free</dt>
+  <dd>The opposite of forgetting to free memory is attempting to free it twice. This does real damage to the malloc coalescing chains.</dd>
+  <dt>Out of bounds access</dt>
+  <dd>We usually think of arrays when we think about over/under runs, but it
+      can also happen with structs (e.g. inherited structs can be larger than
+      their parent's)</dd>
+  <dt>Use after free</dt>
+  <dd>Often happens with memory shared across multiple threads</dd>
+  <dt>Corruption</dt>
+  <dd>Can easily happen with non-atomic multi-threaded access</dd>
+</dl>
+<h3 id="how-does-rust-help"><a class="header" href="#how-does-rust-help">How does Rust help?</a></h3>
+<dl>
+  <dt>Leaks</dt>
+  <dd>Rust enforces a single owner for each item of allocated memory.
+      The memory is freed when the owner goes out of scope.</dd>
+  <dt>Double free</dt>
+  <dd>Addressed by the scope/ownership rules and smart pointers.</dd>
+  <dt>Out of bounds access</dt>
+  <dd>Rust uses both compile and run-time bounds checking</dd>
+  <dt>Use after free</dt>
+  <dd>Rust enforces a multipe reader single writer policy. When coupled with
+      lifetimes and scoped memory management use after free is prevented.</dd>
+  <dt>Corruption</dt>
+  <dd>The multiple reader single writer policy prevents corruption</dd>
+</dl>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="stack-vs-heap"><a class="header" href="#stack-vs-heap">Stack vs Heap</a></h1>
 <img src="img/stack.001.jpeg" alt="C++ vs C">
 <p style="margin-bottom:1cm; text-align: center;">
@@ -226,8 +245,8 @@ int main(int argc, char **argv) {
     int i=0;
     Foo *p = &amp;array[0];
 
-    while (i++ &lt;= N) {
-        (p++)-&gt;field = i;
+    while (i &lt;= N) {
+        (p++)-&gt;field = ++i;
     }
 
     done(p);
@@ -240,8 +259,7 @@ int main(int argc, char **argv) {
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-problems-1"><a class="header" href="#the-problems-1">The Problems</a></h1>
-<p>The following C program compiles without errors or warnings
-It also (mostly) &quot;works&quot;</p>
+<p>Let's look a little deeper...</p>
 <pre><code class="language-c">#include &lt;stdio.h&gt;
 #include &lt;stdlib.h&gt;
 
@@ -265,8 +283,8 @@ int main(int argc, char **argv) {
     int i=0;
     Foo *p = &amp;array[0];
 
-    while (i++ &lt;= N) { // access pass the end of the array
-        (p++)-&gt;field = i;
+    while (i &lt;= N) { // access pass the end of the array
+        (p++)-&gt;field = ++i;
     }
 
     done(p); // p doesn't even point to the malloc base
@@ -279,6 +297,21 @@ int main(int argc, char **argv) {
     return 0;
 }
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ownership"><a class="header" href="#ownership">Ownership</a></h1>
+<p>Ownership is the feature that allows Rust to make guarantees about memory
+safety and integrity without compromising performance.</p>
+<p>The famous <em>borrow checker</em> runs at compile time, and enforces Rust's ownership
+rules to ensure safe and fast access to data.</p>
+<h1 style="font-size: 4rem; color: #ff0000">
+<p style="text-align:center"><u>Ownership Rules</u></p>
+</h1>
+<h1 style="font-size: 3rem; color: #aa0000">
+<ul>
+<li>Every value has a variable called its <em>owner</em></li>
+<li>There is only one owner at a time</li>
+<li>When the owner's lifetime ends, the value is released</li>
+</ul>
+</h1>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="move-vs-copy"><a class="header" href="#move-vs-copy">Move vs Copy</a></h1>
 <p>Simple primitive types have known, fixed size, and can be quickly copied</p>
 <pre><pre class="playground"><code class="language-rust">fn main() {
@@ -402,9 +435,9 @@ fn change(some_string: &amp;mut String) {
 <pre><pre class="playground"><code class="language-rust">fn main() {
     let mut s = String::from(&quot;hello&quot;);
 
-    let r1 = &amp;mut s;
+    let m1 = &amp;mut s;
 
-    println!(&quot;{}, {}&quot;, s, r2);
+    println!(&quot;{}, {}&quot;, s, m1);
 }</code></pre></pre>
 <p>or</p>
 <pre><pre class="playground"><code class="language-rust">fn main() {

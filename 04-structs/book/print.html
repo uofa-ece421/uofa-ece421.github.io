@@ -367,9 +367,10 @@ fn main() -&gt; std::io::Result&lt;()&gt; {
 }</code></pre></pre>
 <p>Lots of different ways to handle errors:</p>
 <ul>
+<li>ignore it (not recommended) - <code>let _ = covid();</code></li>
 <li><code>unwrap()</code> - causes a panic if Err returned</li>
 <li><code>expect(&quot;message&quot;)</code> - prints &quot;message&quot; if Err returned</li>
-<li><code>assert!(handle.read_to_end(&amp;mut data).is_ok())</code> - panics if Err returned</li>
+<li><code>assert!(handle.read_to_end(&amp;mut data).is_ok());</code> - panics if Err returned</li>
 <li>use '?', which propagates the error up the call stack</li>
 <li>use <code>match</code> or <code>if let</code> to handle both success and failure cases</li>
 </ul>
